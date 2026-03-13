@@ -22,8 +22,11 @@ const CUSTOM_DOMAIN_MAP: Record<string, string> = {
   // --- Hof & Kuh ---
  
   
-  "terre-verte.fr": "terre-verte",
+  "trennschleifer-profi.de": "trennschleifer-profi.de",
+  "www.trennschleifer-profi.de": "trennschleifer-profi.de",
   "www.terre-verte.fr": "terre-verte",
+ "functionhabitat.fr": "functionhabitat",
+  "www.functionhabitat.fr": "functionhabitat",
  
   
   // Optional: explizite Subdomains (hilft beim Debuggen/Domain-UI)
