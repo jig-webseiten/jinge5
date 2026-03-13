@@ -16,6 +16,7 @@ const CUSTOM_DOMAIN_MAP: Record<string, string> = {
   // Hof & Kuh
   "hof-und-kuh.de": "hof-und-kuh",
   "www.hof-und-kuh.de": "hof-und-kuh",
+  
 
   // Garden Hero (Hauptdomain)
   "garden-hero.net": "garden-hero",

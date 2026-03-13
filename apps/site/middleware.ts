@@ -22,8 +22,8 @@ const CUSTOM_DOMAIN_MAP: Record<string, string> = {
   // --- Hof & Kuh ---
  
   
-  "trennschleifer-profi.de": "trennschleifer-profi.de",
-  "www.trennschleifer-profi.de": "trennschleifer-profi.de",
+  "trennschleifer-profi.de": "trennschleifer-profi",
+  "www.trennschleifer-profi.de": "trennschleifer-profi",
   "www.terre-verte.fr": "terre-verte",
  "functionhabitat.fr": "functionhabitat",
   "www.functionhabitat.fr": "functionhabitat",
