@@ -1,0 +1,114 @@
+{
+  "siteId": "functionhabitat",
+  "logoUrl": "/logo-functionhabitat.png",
+  "domain": "functionhabitat.fr",
+  "defaultLanguage": "fr",
+  "style": {
+    "tone": "infromativ und unterhaltsam; beratend, erklärend und vergleichend statt werblich",
+    "perspective": "direkte Ansprache in der Sie-Form",
+    "target_audience": "Hausbesiter udn Mieter",
+    "seo_focus": "vergleichende Keywords mit erklärendem Kontext; Fokus auf Orientierung und Abwägung statt Kaufdruck",
+    "keywords_strategy": "Keywords natürlich integrieren; Unterschiede, Vor- und Nachteile klar benennen; Wiederholungen vermeiden; keine reißerischen Formulierungen",
+    "style_examples": {
+      "good": "Im Vergleich lohnt es sich, nicht nur auf den Preis zu schauen. Wichtiger sind Einsatzbereich, Materialqualität und die Frage, was für deine Situation wirklich passt.",
+      "bad": "Jetzt das beste Produkt kaufen – Top-Angebote im Vergleich"
+    },
+    "forbidden_words": [
+      "jetzt kaufen",
+      "kaufen Sie jetzt",
+      "jetzt sichern",
+      "Schnäppchen",
+      "billig",
+      "Top-Angebot",
+      "Deal",
+      "Rabatt",
+      "Bestseller",
+      "Testsieger",
+      "Test",
+      "Vergleichssieger",
+      "100%",
+      "garantiert",
+      "2020",
+      "2021",
+      "2022",
+      "2023",
+      "2024",
+      "2025",
+      "2026"
+    ],
+    "ai_instructions": "Schreibe in der Sie-Form wie eine ruhige, locker und freigeistlich Begleitung. Erkläre Unterschiede nachvollziehbar, benenne Vor- und Nachteile fair und gib praktische Entscheidungshilfen. Kein Kaufdruck, keine reißerischen Begriffe, keine Jahreszahlen. Vergleiche dienen der Orientierung: klare Kriterien, transparente Abwägung, Hinweise auf typische Fehler."
+  },
+  "affiliate": {
+    "amazon": {
+      "partnerTag": "functionhabitat-21",
+      "locale": "FR",
+      "apiMarketplace": "FR",
+      "domain": "amazon.com"
+    }
+  },
+  "branding": {
+    "primary": "#2E7D32",
+    "secondary": "#F6F8F4",
+    "contrastMin": 4.5
+  },
+  "prompts": {
+    "brandName": "Function Habitat",
+    "topicDomain": "Elektrogroßgeräte",
+    "brandDescription": "Function Habitat ist eine Vergleichsseite im Bereich Elektrogroßgeräte. Wir erklären Unterschiede, zeigen sinnvolle Optionen und helfen dabei, gute Entscheidungen ohne Kaufdruck zu treffen.",
+    "voice": "infromativ und unterhaltsam; locker und freigeistlich; vergleichend statt verkaufend",
+    "positioning": "Orientierung statt Verkauf: Wir erklären Kriterien, vergleichen fair, und geben strukturierte Entscheidungshilfen (Tabelle + Einordnung)."
+  },
+  "categories": [
+    {
+      "id": "rfrigrateurs",
+      "slug": "rfrigrateurs",
+      "title": "Réfrigérateurs"
+    },
+    {
+      "id": "lave-linge",
+      "slug": "lave-linge",
+      "title": "Lave-linge"
+    },
+    {
+      "id": "sche-linge",
+      "slug": "sche-linge",
+      "title": "Sèche-linge"
+    },
+    {
+      "id": "lave-vaisselle",
+      "slug": "lave-vaisselle",
+      "title": "Lave-vaisselle"
+    },
+    {
+      "id": "cuisinires",
+      "slug": "cuisinires",
+      "title": "Cuisinières"
+    }
+  ],
+  "authors": [
+    {
+      "id": "aut_1",
+      "name": "Autorin 1",
+      "bio": "Digitale Stimme (KI-gestützt) für strukturierte Vergleiche.",
+      "avatarUrl": "/authors/autorin1.png"
+    },
+    {
+      "id": "aut_2",
+      "name": "Autor 2",
+      "bio": "Digitale Stimme (KI-gestützt) für praktische Einordnung im Alltag.",
+      "avatarUrl": "/authors/autor2.png"
+    },
+    {
+      "id": "aut_3",
+      "name": "Autorin 3",
+      "bio": "Digitale Stimme (KI-gestützt) mit Fokus auf Sicherheit und Verantwortung.",
+      "avatarUrl": "/authors/autorin3.png"
+    },
+    {
+      "id": "aut_4",
+      "name": "Autor 4",
+      "bio": "Digitale Stimme (KI-gestützt), die typische Fehler und Fallstricke verhindert.",
+      "avatarUrl": "/authors/autor4.png"
+    }
+  ]
+}

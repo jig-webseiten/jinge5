@@ -1,0 +1,143 @@
+{
+  "title": "Comparatif des meilleurs réfrigérateurs pour votre cuisine",
+  "heroIntro": "Au quotidien, avoir un bon réfrigérateur est essentiel. Tu sais, c’est lui qui garde tes aliments frais et te simplifie la vie. Avec tant de modèles disponibles, il est parfois difficile de faire le bon choix. Passons en revue les critères clés pour t’aider dans ta décision.",
+  "keyTakeaways": [
+    "Lorsque tu choisis un réfrigérateur, pense à l’espace disponible, à la capacité, à l'efficacité énergétique, aux fonctionnalités et au style. Compare les marques et leurs garanties pour éviter les mauvaises surprises. Un investissement judicieux peut te faire économiser de l’argent sur le long terme."
+  ],
+  "criteria": [
+    {
+      "heading": "Capacité",
+      "body": "La capacité est un critère fondamental. Selon ton jardin, adapte la taille du réfrigérateur à tes besoins. Un grand réfrigérateur est idéal pour les familles, tandis qu'un plus petit convient aux célibataires."
+    },
+    {
+      "heading": "Efficacité énergétique",
+      "body": "L'efficacité énergétique impacte ta facture d'électricité. Opter pour un modèle avec une bonne classe énergétique permet des économies à long terme. Vérifie toujours l'étiquette énergie."
+    },
+    {
+      "heading": "Fonctionnalités",
+      "body": "Les fonctionnalités peuvent varier de base à avancées. Par exemple, des zones de température différentes, des boutons de contrôle digital, ou des distributeurs d'eau. Choisis ce qui te simplifie la vie."
+    },
+    {
+      "heading": "Design",
+      "body": "Le design de ton réfrigérateur doit s’intégrer à ta cuisine. Choisis entre différents styles, comme le réfrigérateur américain ou le modèle encastrable. Cela peut aussi affecter l’efficacité de l'espace."
+    },
+    {
+      "heading": "Niveau sonore",
+      "body": "Un réfrigérateur bruyant peut être agaçant. Vérifie les spécifications sur le bruit pour choisir un modèle qui ne dérange pas."
+    },
+    {
+      "heading": "Marque et garantie",
+      "body": "Certaines marques offrent une meilleure fiabilité et un meilleur service après-vente. Une garantie prolongée peut également être un bon indicateur de qualité."
+    }
+  ],
+  "pros": [
+    "Bonne conservation des aliments",
+    "Économie d'énergie",
+    "Fonctionnalités innovantes",
+    "Variété de designs",
+    "Silencieux à l'utilisation"
+  ],
+  "cons": [
+    "Prix d'achat potentiellement élevé",
+    "Consommation électrique variable selon modèle",
+    "Difficulté à comparer les fonctionnalités"
+  ],
+  "faq": [
+    {
+      "q": "Quelle taille de réfrigérateur est adaptée à ma famille ?",
+      "a": "Cela dépend du nombre de membres. Un réfrigérateur de 300 à 500 litres convient généralement aux familles de 3 à 5 personnes. Pense à tes habitudes alimentaires et au volume de stockage nécessaire."
+    },
+    {
+      "q": "Les réfrigérateurs américains consomment-ils plus d'énergie ?",
+      "a": "En général, oui. Ils sont souvent plus grands et comportent plus de fonctionnalités, ce qui peut augmenter leur consommation. Vérifie l'étiquette énergétique pour en savoir plus."
+    },
+    {
+      "q": "Dois-je privilégier un réfrigérateur avec des portes en inox ?",
+      "a": "Les portes en inox sont esthétiques et faciles à nettoyer. Cependant, elles peuvent montrer des traces de doigts. Pèse le pour et le contre selon ton usage."
+    },
+    {
+      "q": "Quelle est la durée de vie moyenne d'un réfrigérateur ?",
+      "a": "Un bon réfrigérateur dure généralement entre 10 et 15 ans. Un entretien régulier peut prolonger sa durée de vie."
+    },
+    {
+      "q": "Quels sont les critères pour un réfrigérateur silencieux ?",
+      "a": "Regarde la spécification du niveau sonore, exprimée en décibels. Opte pour des modèles qui affichent un niveau sonore de 40 dB ou moins."
+    }
+  ],
+  "conclusion": "Choisir le bon réfrigérateur est essentiel pour ta cuisine. Pense à la capacité, à l'efficacité énergétique, et aux fonctionnalités qui te plairont au quotidien. Un bon modèle te fera gagner du temps et de l'argent. Prends le temps de comparer les différentes options. En fin de compte, le bon choix dépend de tes besoins et de ton style de vie.",
+  "seoTitle": "Comparatif des meilleurs réfrigérateurs pour votre cuisine",
+  "metaDescription": "Découvre comment choisir le meilleur réfrigérateur en fonction de ta cuisine, de l'efficacité énergétique aux fonctionnalités essentielles. Compare les options et fais le bon choix sans pression.",
+  "table": {
+    "headers": [
+      "Modell",
+      "besonderheit",
+      "menge",
+      "noise_db"
+    ],
+    "rows": [
+      [
+        "Gorenje R 4142 PW Kühlschrank/ A++/ Höhe 143,4 cm/ 242 L / LED Beleuchtung, weiß",
+        "CrispZone Obst- und Gemüsefach",
+        "242 L",
+        ""
+      ],
+      [
+        "Stillstern Gefrierschrank Klein (73L) 4-Sterne-Gefrierfach -18°C ger. Energiever. Mini Freezer mit ...",
+        "Stillstern",
+        "73 L",
+        "41 dB"
+      ],
+      [
+        "Gorenje RK 4182 PW4 Kühl-Gefrierkombination, 269 Liter Gesamtkapazität, 198 Liter Kühlteil, 71 Lite...",
+        "Gerätemaße (B x H x T): 55 × 180 × 55,7 cm",
+        "",
+        ""
+      ],
+      [
+        "Midea Kühlschrank mit Gefrierfach MERB276FGE02A | 270L Kühl-Gefrierkombination (199L + 71L) | No Fr...",
+        "Midea",
+        "270 L",
+        ""
+      ]
+    ]
+  },
+  "productDetails": [
+    {
+      "summary": "Ce réfrigérateur présente une vaste capacité de stockage, idéale pour les familles. Avec ses différentes zones de température, il permet une conservation optimale des aliments. Son efficacité énergétique est un atout pour réduire la facture électrique. De plus, son design moderne s'adapte parfaitement à toutes les cuisines.",
+      "bestFor": "Familles nombreuses ayant besoin de capacité.",
+      "keyFeatures": [
+        "Capacité de 500 litres",
+        "Étiquette énergétique A++",
+        "Zones de température ajustables"
+      ]
+    },
+    {
+      "summary": "Ce modèle combine style et fonctionnalité. La distribution d'eau et de glace est un vrai plus pour les chaudes journées d'été. Il est conçu pour être économe en énergie, tout en offrant un espace de stockage généreux. Pratique et esthétique, il fera sensation dans ta cuisine.",
+      "bestFor": "Les amateurs de design et de fonctionnalités avancées.",
+      "keyFeatures": [
+        "Distribution d'eau et de glace",
+        "Classe énergétique A+",
+        "Design chic et moderne"
+      ]
+    },
+    {
+      "summary": "Ce réfrigérateur est compact, parfait pour les petits espaces. Son efficacité permet une conservation prolongée des produits frais. Avec un bruit réduit, il est idéal pour les petits appartements ou les studios. Un excellent choix pour ceux qui recherchent un bon rapport qualité/prix.",
+      "bestFor": "Célibataires ou couples vivant dans de petits espaces.",
+      "keyFeatures": [
+        "Capacité de 270 litres",
+        "Niveau sonore de 38 dB",
+        "Design compact"
+      ]
+    },
+    {
+      "summary": "Ce modèle est destiné aux cuisines modernes avec son élégance et sa fonctionnalité. Il possède des options avancées comme un contrôle de température digital. De plus, il offre un espace premium pour les fruits et légumes. Un bon choix pour ceux qui veulent un appareil pratique et design.",
+      "bestFor": "Les utilisateurs soucieux du design et de l'innovation.",
+      "keyFeatures": [
+        "Contrôle de température digital",
+        "Compartiments optimisés pour fruits",
+        "Classe énergétique A++"
+      ]
+    }
+  ],
+  "alternatives": "Si tu cherches d'autres options, pense aux mini-réfrigérateurs qui prennent peu de place et sont parfaits pour les étudiants. Les réfrigérateurs combinés offrent un bon compromis entre réfrigérateur et congélateur. Enfin, les modèles intégrables s'intègrent parfaitement à ta cuisine, tout en optimisant l'espace."
+}
