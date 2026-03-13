@@ -15,7 +15,7 @@ import { NextResponse } from "next/server";
  *   (Kein Rewrite auf /s/[siteId] in dieser Version.)
  */
 
-const ROOT_DOMAIN = "terre-verte.fr";
+const ROOT_DOMAIN = "trennschleifer-profi.de";
 
 /** Explizite Zuordnung: Custom Domain -> siteId */
 const CUSTOM_DOMAIN_MAP: Record<string, string> = {
