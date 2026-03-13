@@ -1,0 +1,29 @@
+.buy-button {
+  display: inline-block;
+  background-color: #ff9900; /* Amazon-Orange */
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: background-color 0.2s ease;
+}
+
+.buy-button:hover {
+  background-color: #cc7a00;
+}
+
+
+/* Globale Link-Styles */
+a {
+  color: #000;               /* schwarz */
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: #000;               /* bleibt schwarz auch beim Hover */
+  text-decoration-thickness: 1.5px;
+}
+

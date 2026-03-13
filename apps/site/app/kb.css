@@ -1,0 +1,357 @@
+/* ===== Vergleichstabelle (ohne Sticky) ===== */
+.table-wrap {
+  position: relative;
+  overflow-x: auto;       /* horizontal scrollen bei schmalen Viewports */
+  overflow-y: hidden;     /* vertikal nichts clippen */
+  border: 1px solid #e5e7eb;   /* neutral-200 */
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+
+.comparison-table {
+  width: 100%;
+  min-width: 720px;       /* verhindert, dass Spalten zu eng zusammenstauchen */
+  border-collapse: separate;   /* wichtig: kein collapse */
+  border-spacing: 0;
+  font-size: 0.95rem;
+}
+
+.comparison-table thead th {
+  /* KEIN sticky! */
+  position: static;
+  background: #f9fafb;    /* dezenter Kopfbereich */
+  text-align: left;
+  font-weight: 600;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.comparison-table tbody td {
+  padding: 12px 14px;
+  vertical-align: top;
+  border-bottom: 1px solid #f1f5f9;  /* slate-100 */
+}
+
+
+/* Default-Hintergrund pro Zeile als Variable vorbereiten */
+.comparison-table tbody tr {
+  --row-bg: transparent;
+}
+
+/* Zebra: setzt die Default-Farbe für ungerade Zeilen */
+.comparison-table tbody tr:nth-child(odd) {
+  --row-bg: #fcfcfd; /* DEIN Zebra-Ton */
+}
+
+/* Zellen nutzen immer die aktuelle Zeilen-Farbe */
+.comparison-table tbody td {
+  background: var(--row-bg);
+  transition: background .15s ease;
+}
+
+/* Hover überschreibt die Variable für jede Zeile (egal ob odd/even) */
+.comparison-table tbody tr:hover {
+  --row-bg: #eef2ff; /* DEINE Hover-Farbe, gern etwas kräftiger */
+}
+
+
+/* Bildzelle hübsch */
+.comparison-table img {
+  display: block;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #eef2f7;
+}
+
+/* BRAND-GREEN SOLID – stelle hier deinen Grünton ein */
+:root {
+  --brand-green:       #16a34a; /* dein Grünton (z. B. Tailwind green-600) */
+  --brand-green-solid: #166534; /* dunklere, kontraststarke Version für den Button */
+  --brand-green-hover: #14532d; /* noch etwas dunkler für Hover */
+}
+
+.comparison-table .buy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: var(--brand-green-solid); /* kontrastsichere dunkle Basis */
+  border: 1px solid var(--brand-green-hover);
+  color: #ffffff;                      /* weißer Text für maximalen Kontrast */
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: .01em;
+  text-decoration: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,.06) inset;
+  transition: background .15s ease, border-color .15s ease, transform .04s ease;
+}
+.comparison-table .buy-button:hover {
+  background: var(--brand-green-hover);
+  border-color: var(--brand-green-hover);
+}
+.comparison-table .buy-button:active { transform: translateY(1px); }
+.comparison-table .buy-button:focus-visible {
+  outline: 3px solid rgba(20,83,45,.45); /* Fokus-Ring passend zum Grün */
+  outline-offset: 2px;
+}
+
+/* A11y: nur für Screenreader sichtbar */
+.sr-only {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+
+/* ===== Hero & Produktdetails (für 2.2/2.3 Konsistenz) ===== */
+/* ===== Hero & Produktdetails (für 2.4: Titel über beide Spalten) ===== */
+/* ===== Hero & Produktdetails (2.4 fix: Titel über beide Spalten, Intro oben rechts) ===== */
+.hero-split {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  grid-template-areas:
+    "title title"
+    "left  intro"
+    "left  right";
+  gap: 24px;
+  align-items: start; /* alles oben ausrichten */
+}
+
+/* Titel über beide Spalten */
+.hero-split .page-title {
+  grid-area: title;
+  margin: 0 0 8px;
+  line-height: 1.15;
+}
+
+/* Linke Spalte: Bild über zwei Reihen */
+.hero-left { grid-area: left; }
+.hero-img {
+  width: 100%;
+  height: auto;
+  border-radius: 16px;
+  display: block;
+  background: #fff;
+  border: 1px solid #eef2f7;
+  align-self: start; /* sicher oben */
+}
+
+/* Rechte Spalte: Kinder direkt als Grid-Items behandeln */
+.hero-right { display: contents; }
+
+/* Intro-Absatz = oberes rechtes Feld */
+.hero-right > p:first-of-type {
+  grid-area: intro;
+  margin: 0 0 6px;
+}
+
+/* Key-Takeaways = unteres rechtes Feld */
+.hero-right .key-takeaways {
+  grid-area: right;
+}
+
+/* ===== Mobile Breakpoints ===== */
+@media (max-width: 960px) {
+  .hero-split {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "title"
+      "left"
+      "intro"
+      "right";
+    gap: 16px;
+  }
+}
+
+
+.key-takeaways ul { margin: 10px 0 0; padding-left: 18px; } /* leicht mehr Luft */
+.key-takeaways li { margin: 4px 0; }
+
+/* Zwei-Spalten Produktabschnitt */
+.prod-two-col {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+.product-image {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  display: block;
+  background: #fff;
+  border: 1px solid #eef2f7;
+}
+
+/* Pros/Cons Karten */
+.proscons { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.pros-card, .cons-card {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.pros-card h3, .cons-card h3 { margin: 0 0 8px; }
+
+/* FAQ Details */
+details.faq { border-top: 1px solid #f1f5f9; padding: 10px 0; }
+details.faq > summary { cursor: pointer; font-weight: 600; }
+
+/* ===== Mobile Breakpoints ===== */
+@media (max-width: 960px) {
+  .hero-split { grid-template-columns: 1fr; }
+  .prod-two-col { grid-template-columns: 1fr; }
+  .proscons { grid-template-columns: 1fr; }
+  .comparison-table { min-width: 640px; } /* etwas schmaler für Tablets */
+}
+@media (max-width: 520px) {
+  .comparison-table { min-width: 560px; font-size: 0.9rem; }
+  .buy-button { padding: 8px 12px; font-size: 0.95rem; }
+}
+
+/* ===== Karten-Thumbnails (Startseite & Kategorien) ===== */
+.card-thumb{
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;   /* Quadrat erzwingen */
+  overflow: hidden;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #eef2f7;
+}
+
+/* Optional: Kartenlayout kleine Abstände */
+.card {
+  display: grid;
+  gap: 10px;
+}
+.card-title {
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.hero-right,
+.table-wrap,
+.comparison-table th, .comparison-table td,
+.prod-left, .prod-right,
+.proscons, .faq {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.comparison-table { table-layout: fixed; width: 100%; }
+
+/* Globale Link-Styles */
+a {
+  color: #000;               /* schwarz */
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: #000;               /* bleibt schwarz auch beim Hover */
+  text-decoration-thickness: 1.5px;
+}
+
+
+.table-footnote-marker {
+  width: 100%;
+  text-align: right;
+  margin-top: -0.25rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.99rem;
+  color: #667;
+}
+
+header[role="banner"] {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.site-nav a.active {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.75);
+  padding-bottom: 2px;
+}
+
+.site-nav {
+  padding: 4px 16px;          /* 👈 weniger Höhe */
+  min-height: 0;
+}
+
+.site-nav a {
+  padding: 2px 6px;     /* 👈 DAS entfernt die Luft über dem Logo */
+  line-height: 1.1;     /* 👈 verhindert extra Zeilenhöhe */
+}
+
+.site-nav a:hover {
+  text-decoration: underline; /* optional */
+}
+
+.site-nav .brand {
+  padding: 0;           /* 👈 Logo-Link bekommt KEIN Extra-Padding */
+  line-height: 1;
+}
+
+
+.btn-amazon {
+  display: inline-flex;
+  align-items: center;           /* vertikal zentriert */
+  justify-content: center;       /* horizontal zentriert */
+
+  max-width: 100%;               /* Button bleibt in der Spalte */
+  box-sizing: border-box;
+
+  padding: 0.5rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+
+  color: #111;
+  background-color: #FF9900;
+  border-radius: 12px;
+
+  /* Text darf umbrechen (2 Zeilen etc.) */
+  white-space: normal;           /* WICHTIG */
+  text-align: center;            /* Text zentriert */
+  line-height: 1.2;
+
+  /* verhindert "Text läuft raus" */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+
+  /* niemals unterstrichen */
+  text-decoration: none !important;
+
+  box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+  transition: background-color .15s ease, transform .05s ease;
+}
+
+/* Alle Zustände absichern (Global-Styles überschreiben gerne) */
+.btn-amazon:hover,
+.btn-amazon:active,
+.btn-amazon:visited,
+.btn-amazon:focus,
+.btn-amazon:focus-visible {
+  text-decoration: none !important;
+  color: #111;
+}
+
+.btn-amazon:hover {
+  background-color: #F08804;
+}
+
+.btn-amazon:active {
+  background-color: #E47911;
+  transform: translateY(1px);
+}
+

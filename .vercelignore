@@ -1,0 +1,13 @@
+# Ignoriere JEDE generate-Route egal wo sie liegt
+**/app/api/generate/**
+**/app/api/generate.js
+**/app/api/generate.mjs
+
+# Schwerer Content, der online nicht nötig ist (optional, aber sinnvoll)
+**/_ai-debug/**
+**/_ai-raw/**
+**/_debug/**
+**/*.ai.json
+
+# NEU: AI-Bilder im Content-Ordner (jetzt nur noch Cache, Live-Bilder liegen in public/ai)
+apps/site/sites/**/_ai/**

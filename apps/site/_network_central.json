@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "version": "1.0"
+  },
+  "links": [
+    {
+      "id": "garden-hero:fruchtfliegenfalle-ohne-essig",
+      "type": "network",
+      "siteId": "garden-hero",
+      "domain": "www.garden-hero.net",
+      "title": "Ratgeber: Fruchtfliegenfalle ohne Essig – So wirst du sie los",
+      "url": "https://www.garden-hero.net/fruchtfliegenfalle-ohne-essig",
+      "keywords": [
+        {
+          "kw": "Fruchtfliegenfalle ohne Essig",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "pflanzgefaesse"
+      ],
+      "group": "kw:fruchtfliegenfalle-ohne-essig",
+      "used": 0,
+      "usedBy": [],
+      "updatedAt": "2025-11-22T20:56:05.023Z"
+    }
+  ]
+}

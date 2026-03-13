@@ -1,0 +1,33 @@
+{
+    "name": "jinge-j3-fr",
+    "workspaces": [
+        "apps/*",
+        "packages/*",
+        "sites/*"
+    ],
+    "scripts": {
+        "dev": "pnpm --filter @jinge/site dev",
+        "build": "pnpm -r build",
+        "lint": "echo 'add eslint later'",
+        "generate": "pnpm --filter @jinge/site tsx app/api/generate/dev-run.ts"
+    },
+    "devDependencies": {
+        "@types/node": "^20",
+        "tsx": "^4.19.0",
+        "typescript": "^5.4.0"
+    },
+    "dependencies": {
+        "@vercel/analytics": "^1.6.1",
+        "@vercel/speed-insights": "^1.3.1",
+        "aws4": "^1.13.2",
+        "gray-matter": "^4.0.3",
+        "marked": "^16.1.2",
+        "openai": "^5.12.2",
+        "paapi5-nodejs-sdk": "^1.1.0"
+    },
+    "private": true,
+    "packageManager": "pnpm@9.0.0",
+    "engines": {
+        "node": ">=20 <23"
+    }
+}

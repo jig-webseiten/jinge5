@@ -1,0 +1,3505 @@
+// apps/site/app/api/generate/route.ts
+export const runtime = "nodejs";
+
+import { NextResponse } from "next/server";
+import * as fs from "node:fs";
+import { contentRoot } from "@/lib/paths";
+import OpenAI from "openai";
+import { paapiGetItems, buildAffiliateUrl } from "@jinge/integrations/amazon.pa";
+
+import type { Metadata } from "next";
+
+//export const metadata: Metadata = {
+//  title: "Artikelübersicht",
+//  description:
+//    "Neueste Kaufberatungen und übersichtliche Vergleiche zu Gartenwerkzeugen, Beleuchtung und Outdoor-Zubehör – kompakt, verständlich und aktuell.",
+//  alternates: { canonical: "/" },
+//  openGraph: {
+//    title: "Artikelübersicht",
+//    description:
+//      "Neueste Kaufberatungen und übersichtliche Vergleiche zu Gartenwerkzeugen, Beleuchtung und Outdoor-Zubehör – kompakt, verständlich und aktuell.",
+//  },
+//};
+
+
+/* ======================================================================== */
+/* =                               UTILITIES                               = */
+/* ======================================================================== */
+
+	function safeStr(v: unknown): string {
+	  return String(v ?? "").trim();
+	}
+
+	type ProductSpec = { [key: string]: unknown }; // nur f�r dynamischen Zugriff
+
+
+	// ---- Synonyms generator (SEO-freundlich, natürlich) -----------------------
+	function uniqByNorm(list: string[]): string[] {
+	  const seen = new Set<string>();
+	  const out: string[] = [];
+	  for (const s of list.map(x => String(x || "").trim()).filter(Boolean)) {
+		const k = normDe(s);
+		if (!seen.has(k)) { seen.add(k); out.push(s); }
+	  }
+	  return out;
+	}
+
+	function titleCaseDe(s: string) {
+	  return s.replace(/\S+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+	}
+
+	type RegistryEntry = {
+	  mainKeyword?: string;
+	  [key: string]: any;
+	};
+
+
+
+
+	function generateSynonymsForEntry(e: RegistryEntry): string[] {
+	  const kwRaw = String(e.mainKeyword || "").trim();
+	  if (!kwRaw) return [];
+
+	  // Versuche "<Head> aus <Material>" zu erkennen
+	  const m = kwRaw.match(/^(.+?)\s+aus\s+(.+)$/i);
+	  const headRaw = (m ? m[1] : kwRaw).trim();        // z. B. "Gartenbank"
+	  const materialRaw = (m ? m[2] : "").trim();       // z. B. "Eichenholz"
+
+	  // Head normalisieren
+	  const headNorm = normDe(headRaw);
+
+	  // Bank-Head-Varianten (ohne Klammern/Marketing)
+	  // Reihenfolge = Priorität in der Ausgabe
+	  const isBank = /\bbank\b/i.test(headRaw);
+	  const BANK_HEADS = ["Gartenbank", "Holzbank", "Sitzbank", "Outdoorbank"];
+
+	  // Fallback: wenn kein Bank-Head, nur das Original weiterverwenden
+	  const headVariants = isBank
+		? BANK_HEADS
+		: [headRaw];
+
+	  // Material normalisieren -> auf „Eiche“/„Eichenholz“ mappen (generisch ausbaufähig)
+	  const mat = normDe(materialRaw);
+	  let materials: string[] = [];
+	  if (/eichenholz|eiche/.test(mat)) {
+		materials = ["Eiche", "Eichenholz"];
+	  } else if (/teakholz|teak/.test(mat)) {
+		materials = ["Teak", "Teakholz"];
+	  } else if (/akazienholz|akazie/.test(mat)) {
+		materials = ["Akazie", "Akazienholz"];
+	  } else if (/kiefernholz|kiefer/.test(mat)) {
+		materials = ["Kiefer", "Kiefernholz"];
+	  } else if (materialRaw) {
+		// generischer Fallback: groß schreiben
+		const matTitle = materialRaw.charAt(0).toUpperCase() + materialRaw.slice(1).toLowerCase();
+		materials = [matTitle];
+	  }
+
+	  // Wunschmuster bauen – kurz, natürlich, SEO-freundlich
+	  const out: string[] = [];
+
+	  // 1) Top-Head „aus <Material>“ (Eiche/Eichenholz)
+	  const topHead = headVariants[0];
+	  for (const m of materials) {
+		out.push(`${topHead} aus ${m}`);
+	  }
+
+	  // 2) Weitere Head-Varianten mit „aus Eiche“ (nur das primäre Material „Eiche“)
+	  const primaryMat = materials.includes("Eiche") ? "Eiche" : (materials[0] || "");
+	  if (primaryMat) {
+		for (const hv of headVariants.slice(1)) {
+		  out.push(`${hv} aus ${primaryMat}`);
+		}
+	  }
+
+	  // 3) Eine (und nur eine) sinnvolle zusammengesetzte Form bei „Bank + Eiche“
+	  if (isBank && /eiche/.test(mat)) {
+		out.push("Eichenholzbank");
+	  }
+
+	  // Säubern, deduplizieren, auf sinnvolle Länge begrenzen
+	  const uniq = (() => {
+		const seen = new Set<string>();
+		const cleaned: string[] = [];
+		for (const s of out) {
+		  const t = s.replace(/\s+/g, " ").trim();
+		  if (!t) continue;
+		  const k = normDe(t);
+		  if (!seen.has(k)) { seen.add(k); cleaned.push(t); }
+		}
+		return cleaned;
+	  })();
+
+	  // 5–7 knackige Synonyme reichen völlig
+	  return uniq.slice(0, 7);
+	}
+
+
+type ContentRegistry = { items: RegistryEntry[] };
+
+function getRegistryPath(projectRoot: string, siteId: string) {
+  return path.join(projectRoot, "sites", siteId, "content", "_registry.json");
+}
+
+function readRegistry(projectRoot: string, siteId: string): ContentRegistry {
+  try {
+    const p = getRegistryPath(projectRoot, siteId);
+    const raw = fs.readFileSync(p, "utf8");
+    const json = JSON.parse(raw);
+    if (!json || !Array.isArray(json.items)) return { items: [] };
+    return json as ContentRegistry;
+  } catch { return { items: [] }; }
+}
+
+function writeRegistry(projectRoot: string, siteId: string, reg: ContentRegistry) {
+  const p = getRegistryPath(projectRoot, siteId);
+  ensureDir(path.dirname(p));
+  fs.writeFileSync(p, JSON.stringify(reg, null, 2), "utf8");
+}
+
+
+
+// ---- Synonym-Filter: natürlich, ohne Kauf-Intent/Slug-Formen ----
+function shouldKeepSynonym(main: string, syn: string) {
+  const nm = normDe(main);
+  const ns = normDe(syn);
+  if (!ns) return false;
+
+  // identisch zum Main-Keyword -> raus
+  if (nm === ns) return false;
+
+  // „MainKeyword + 1 Füllwort“ (z. B. „… kaufen/online/günstig“) -> raus
+  if (ns.startsWith(nm)) {
+    const extra = ns.slice(nm.length).trim().split(/\s+/).filter(Boolean);
+    if (extra.length <= 1) return false;
+  }
+
+  // Kauf-Intent / Shop-Noise -> raus
+  if (/\b(kaufen|bestellen|online|guenstig|günstig|preis|angebot|deal|shop)\b/i.test(syn)) return false;
+
+  // Slug-/Bindestrich-Wüste -> raus
+  if (/(?:[a-zäöüß])-+(?:[a-zäöüß])|_/i.test(syn)) return false;
+
+  // i. d. R. 2–4 Wörter behalten; 1-Wort nur, wenn sinnvolles Kompositum (Öl/Holz/Möbel/Bank/Tisch/Stuhl)
+  const words = syn.trim().split(/\s+/).filter(Boolean).length;
+  const isCompound = /(öl|holz|möbel|bank|tisch|stuhl)/i.test(syn.replace(/\s+/g, ""));
+  if (words < 2 && !isCompound) return false;
+
+  // Längenbegrenzung (du nutzt später ohnehin <=45)
+  if (syn.length > 60) return false;
+
+  return true;
+}
+
+
+// Füllt registry.items[*].synonyms mit ~5 SEO-freundlichen Varianten auf
+async function ensureRegistrySynonyms(
+  projectRoot: string,
+  siteId: string,
+  language: "de" | "en" | "fr" = "de",
+  targetCount = 5
+) {
+  const reg = readRegistry(projectRoot, siteId);
+  if (!reg?.items?.length) return;
+
+  const client = getOpenAI();
+
+  const normKey = (s: string) => normDe(s).replace(/\s+/g, " ").trim();
+  const clean = (s: string) =>
+    String(s || "")
+      .replace(/[“”"']/g, "")
+      .replace(/[|]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  // sehr robuste Dedupe-Funktion (case + Umlaute)
+  const dedupe = (arr: string[]) => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const x of arr.map(clean).filter(Boolean)) {
+      const k = normKey(x);
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      out.push(x);
+    }
+    return out;
+  };
+
+  // einfache deutsch-spezifische Heuristiken (funktionieren ohne AI)
+  function heuristicSynonymsDE(mainKeyword: string): string[] {
+    const base = clean(mainKeyword);
+    const lower = base.toLowerCase();
+
+    // Hilfs-Konvertierungen (Material/Attribute)
+    const materialSimplify = (s: string) =>
+      s
+        .replace(/\beichenholz\b/gi, "eiche")
+        .replace(/\bholzöl\b/gi, "holzöl") // stabilisieren
+        .replace(/\böl(e)?\b/gi, "öl");
+
+    // „X aus Y“ → Varianten
+    const ausRe = /(.*)\baus\s+([a-zäöüß\- ]+)\s*$/i;
+    const fuerRe = /(.*)\bfür\s+([a-zäöüß\- ]+)\s*$/i;
+
+    const cands = new Set<string>([base]);
+
+    // Splits für „aus/für“
+    const ausM = lower.match(ausRe);
+    const fuerM = lower.match(fuerRe);
+
+    const add = (s: string) => cands.add(clean(s));
+
+    // Hyphen/Order-Varianten allgemein
+    const parts = base.split(/\s+/);
+    if (parts.length >= 2) {
+      add(`${parts.slice(-1)} ${parts.slice(0, -1).join(" ")}`); // letztes Wort nach vorn
+      //add(`${parts.slice(-1)}-${parts.slice(0, -1).join(" ")}`); // mit Bindestrich
+     // add(parts.join("-"));                                       // alles hyphen
+    }
+
+    // „aus …“ Varianten
+    if (ausM) {
+      const obj = clean(base.replace(ausRe, "$1")).trim();
+      const mat = materialSimplify(clean(base.replace(ausRe, "$2")).trim());
+      if (obj && mat) {
+        add(`${mat} ${obj}`);
+        add(`${mat}-${obj}`);
+        add(`${obj} ${mat}`);
+        // Falls „holz/öl“ im Spiel → typische Suchform
+        if (/öl|oel|holz/i.test(lower)) {
+          add(`${mat} holzöl`);
+          add(`öl für ${mat}`);
+          add(`holzöl ${mat}`);
+        }
+      }
+    }
+
+    // „für …“ Varianten
+    if (fuerM) {
+      const obj = clean(base.replace(fuerRe, "$1")).trim();
+      const tgt = materialSimplify(clean(base.replace(fuerRe, "$2")).trim());
+      if (obj && tgt) {
+        add(`${tgt} ${obj}`);
+        add(`${tgt}-${obj}`);
+        add(`${obj} ${tgt}`);
+        if (/öl|oel|holz/i.test(lower)) {
+          add(`holzöl ${tgt}`);
+          add(`öl für ${tgt}`);
+        }
+      }
+    }
+
+    // kleine Normalisierungen, z. B. „Eichenholzöl“ erzeugen
+    if (/eichenholz/i.test(base) && /öl|oel/i.test(base)) {
+      add("eichenholzöl");
+      add("holzöl eiche");
+      add("öl für eiche");
+    }
+
+    // kompakte Varianten bevorzugen
+    const filtered = Array.from(cands)
+      .map(clean)
+      .filter(Boolean)
+      .filter(x => x.length <= 45);
+
+    return dedupe(filtered);
+  }
+
+  // pro Eintrag auffüllen
+  let changed = false;
+
+  for (const e of reg.items) {
+    const have = Array.isArray(e.synonyms) ? e.synonyms : [];
+    let out = [...have];
+
+    if (out.length < targetCount) {
+      // Heuristik zuerst (funktioniert ohne API-Key)
+      const heur = heuristicSynonymsDE(String(e.mainKeyword ?? "").trim());
+      out = dedupe([...out, ...heur]);
+    }
+
+    if (client && out.length < targetCount) {
+      try {
+        // OpenAI nach schlüssigen Such-Varianten fragen
+        const sys =
+          language === "de"
+            ? "Du bist ein deutscher SEO-Keyword-Expander. Gib NUR JSON {\"synonyms\":[\"...\"]} zurück."
+            : language === "fr"
+              ? "Tu es un expandisseur de mots-clés SEO. Retourne UNIQUEMENT {\"synonyms\":[\"...\"]}."
+              : "You are an SEO keyword expander. Return ONLY {\"synonyms\":[\"...\"]}.";
+
+        const prompt = {
+          mainKeyword: e.mainKeyword,
+          category: e.category,
+          constraints: {
+            count: targetCount,
+            language,
+            style: "kurz, natürlich, suchorientiert",
+            // 2–4 Wörter, alltagsnah, Varianten mit/ohne Bindestrich und Wortreihenfolge
+            rules: [
+              "2–4 Wörter pro Variante",
+              "keine Marken, keine Preise",
+              "geläufige Schreibweisen, ggf. mit/ohne Bindestrich",
+              "Wortreihenfolge variieren (Kopfbegriff/Attribut)",
+              "keine Anführungszeichen/Emojis/Keywords stuffing"
+            ]
+          }
+        };
+
+        const r = await withTimeout(
+          client.chat.completions.create({
+            model: process.env.OPENAI_TEXT_MODEL ?? "gpt-4o-mini",
+            messages: [
+              { role: "system", content: sys },
+              { role: "user", content: JSON.stringify(prompt) }
+            ],
+            response_format: { type: "json_object" } as any,
+            max_completion_tokens: 300,
+            temperature: 0.4
+          }),
+          20000
+        );
+
+        const txt = r.choices?.[0]?.message?.content ?? "{}";
+        const parsed = tryParseJsonStrict(txt);
+        const aiSyn: string[] = Array.isArray(parsed?.synonyms) ? parsed.synonyms : [];
+
+        out = dedupe([...out, ...aiSyn]);
+      } catch {
+        // still fine – Heuristik bleibt
+      }
+    }
+
+	const kw = safeStr(e.mainKeyword);
+
+	// 1) Hauptbegriff raus
+	out = out.filter(x => normKey(x) !== normKey(kw));
+
+	// 2) Qualit�tsfilter �
+	out = out.filter(s => shouldKeepSynonym(kw, s));
+
+
+	// 3) nochmal deduplizieren (nach dem Filtern)
+	out = dedupe(out);
+
+	// 4) final auf Zielgröße kürzen
+	if (out.length > targetCount) out = out.slice(0, targetCount);
+
+    // speichern, falls geändert
+    const before = JSON.stringify(have);
+    const after = JSON.stringify(out);
+    if (before !== after) {
+      e.synonyms = out;
+      changed = true;
+    }
+  }
+
+  if (changed) writeRegistry(projectRoot, siteId, reg);
+}
+
+
+
+
+
+// einfache DE-Normalisierung für Keyword-Matches
+function normDe(s: string) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+
+
+
+
+function slugify(s: string) {
+  return String(s || "")
+    .trim()
+    .toLowerCase()
+    // deutsche Umlaute / ß transliterieren:
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    // alles Nicht-Alphanumerische zu Bindestrich
+    .replace(/[^a-z0-9]+/g, "-")
+    // doppelte/trailing Bindestriche säubern
+    .replace(/^-+|-+$/g, "");
+}
+
+
+function escapeHtml(str: string): string {
+  return str
+    ? str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;")
+    : "";
+}
+
+function findProjectRoot(): string {
+  const candidates = [
+    path.resolve(process.cwd(), "..", ".."),
+    path.resolve(process.cwd(), ".."),
+    process.cwd(),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(path.join(c, "sites"))) return c;
+  }
+  return process.cwd();
+}
+
+
+
+
+
+function ensureDir(p: string) {
+  fs.mkdirSync(p, { recursive: true });
+}
+
+function readSiteConfig(projectRoot: string, siteId: string) {
+  const p = path.join(projectRoot, "sites", siteId, "config.json");
+  try {
+    const raw = fs.readFileSync(p, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return {
+      affiliate: { amazon: { partnerTag: "" } },
+      authors: [{ id: "aut_anna", name: "Anna Weber", bio: "" }],
+    };
+  }
+}
+
+function maskKey(k?: string | null) {
+  if (!k) return null;
+  const s = String(k);
+  if (s.length <= 8) return "*".repeat(s.length);
+  return s.slice(0, 4) + "…" + s.slice(-4);
+}
+
+function envSummary(siteCfg: any) {
+  const openaiKey = process.env.OPENAI_API_KEY || null;
+  const partner = process.env.AMAZON_PA_PARTNER_TAG || siteCfg?.affiliate?.amazon?.partnerTag || null;
+  return {
+    openai_present: !!openaiKey,
+    openai_masked: maskKey(openaiKey),
+    amazon_tag_present: !!partner,
+    amazon_tag_masked: maskKey(partner),
+  };
+}
+
+async function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
+async function withTimeout<T>(p: Promise<T>, ms = 150000): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`openai timeout after ${ms}ms`)), ms)),
+  ]) as Promise<T>;
+}
+
+function getOpenAI() {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key || !/^sk-/.test(key)) return null;
+  return new OpenAI({ apiKey: key });
+}
+
+/** defensives get */
+function gp(obj: any, pathArr: string[]): any {
+  return pathArr.reduce((o, k) => (o && k in o ? o[k] : undefined), obj);
+}
+function s(v: any): string { if (v == null) return ""; if (Array.isArray(v)) return v.join(" "); return String(v); }
+function firstNonEmpty(...vals: any[]): string {
+  for (const v of vals) { const t = s(v).trim(); if (t) return t; } return "";
+}
+function truncate(str: string, max = 100): string {
+  const t = str.trim(); if (t.length <= max) return t; return t.slice(0, max - 1) + "…";
+}
+
+function parseEnergy(text: string): "Akku" | "Netz" | "Benzin" | "" {
+  const T = text.toLowerCase();
+  if (/(akku|battery|cordless|li-?ion)/.test(T)) return "Akku";
+  if (/(netz|electric|corded|230v|220v|110v|kabel)/.test(T)) return "Netz";
+  if (/(benzin|petrol|gasoline)/.test(T)) return "Benzin";
+  return "";
+}
+function parseCutWidth(text: string): string {
+  const m = text.match(/(\d{2}(?:[.,]\d)?)\s?cm/i); if (m) return `${m[1].replace(".", ",")} cm`;
+  const mInch = text.match(/(\d{1,2}(?:[.,]\d)?)\s?(?:inch|")/i);
+  if (mInch) { const val = parseFloat(mInch[1].replace(",", ".")); if (!isNaN(val)) return `${(val * 2.54).toFixed(0)} cm`; }
+  return "";
+}
+function parseWeight(text: string): string {
+  const m = text.match(/(\d+(?:[.,]\d+)?)\s?kg/i); if (m) return `${m[1].replace(".", ",")} kg`;
+  const g = text.match(/(\d{3,4})\s?g/i); if (g) { const kg = (parseFloat(g[1]) / 1000).toFixed(1).replace(".", ","); return `${kg} kg`; }
+  return "";
+}
+function pickUSP(features: string[], brand: string): string {
+  const short = features.find(f => f && f.length <= 80);
+  return short || brand || "";
+}
+
+
+	/* ======================================================================== */
+	/* =                     LINKING: REGISTRY + NETWORK                       = */
+	/* ======================================================================== */
+
+	type NetworkLink = {
+	  id?: string;
+	  type?: "network" | "external";
+	  siteId?: string;
+	  domain?: string;
+	  title: string;
+	  url: string;
+	  keywords?: Array<{ kw: string; match?: "exact" | "phrase" | "regex"; anchor?: string[] }>;
+	  rel?: string;
+	  language?: string;
+	  categories?: string[];
+	  group?: string;        // pro Artikel nur EIN Link je group
+	  used?: number;
+	  usedBy?: string[];
+	  updatedAt?: string;
+	};
+
+	type ExternalRules = {
+	  maxNetworkLinksPerArticle?: number;           // Default 3
+	  dedupeNetworkPerKeyword?: boolean;            // Default true (bei Auswahl je group nur 1)
+	  match?: { caseInsensitive?: boolean; stripDiacritics?: boolean };
+	};
+
+	type CentralNetworkJson = {
+	  meta?: { version?: string };
+	  rules?: ExternalRules;
+	  links: NetworkLink[];
+	};
+
+	/** JSON sicher lesen (silent) */
+	function safeReadJson<T = any>(p: string): T | null {
+	  try { return JSON.parse(fs.readFileSync(p, "utf8")); }
+	  catch { return null; }
+	}
+
+	/** Interne Keywords laden, um Konflikte zu vermeiden (aus deiner content/_registry.json) */
+	function loadInternalKeywords(projectRoot: string, siteId: string): Set<string> {
+	  const set = new Set<string>();
+	  try {
+		const reg = readRegistry(projectRoot, siteId); // nutzt deinen bestehenden Reader
+		for (const it of reg.items || []) {
+		  if (typeof (it as any).mainKeyword === "string") {
+			const kw = String((it as any).mainKeyword).trim();
+			if (kw) set.add(kw);
+		  }
+		  // falls du Synonyme im Registry-Eintrag pflegst, auch berücksichtigen
+		  if (Array.isArray((it as any).synonyms)) {
+			for (const s of (it as any).synonyms) {
+			  if (typeof s === "string" && s.trim()) set.add(s.trim());
+			}
+		  }
+		  // optional: falls du dort weitere keyword-Felder nutzt
+		  if (Array.isArray((it as any).keywords)) {
+			for (const s of (it as any).keywords) {
+			  if (typeof s === "string" && s.trim()) set.add(s.trim());
+			}
+		  }
+		}
+	  } catch { /* ignore */ }
+	  return set;
+	}
+
+	/** Pfad zur zentralen Netzwerkdatei (per ENV überschreibbar) */
+	function pathCentralNetwork(projectRoot: string): string {
+	  const env = process.env.CENTRAL_NETWORK_PATH;
+	  return env && env.trim().length > 0
+		? env
+		: path.join(projectRoot, "sites", "_network_central.json");
+	}
+
+	/** Zentrale Netzwerkdatei laden (nur type=network, eigene Site ausfiltern) */
+	function loadCentralNetwork(projectRoot: string, currentSiteId: string): { rules: ExternalRules; links: NetworkLink[] } {
+	  const p = pathCentralNetwork(projectRoot);
+	  const data = (safeReadJson<CentralNetworkJson>(p) || { links: [] }) as CentralNetworkJson;
+
+	  const rules: ExternalRules = {
+		maxNetworkLinksPerArticle: 3,
+		dedupeNetworkPerKeyword: true,
+		match: { caseInsensitive: true, stripDiacritics: true },
+		...(data.rules || {})
+	  };
+
+	  const links = (data.links || []).filter(l =>
+		(l.type || "network") === "network" && l.siteId !== currentSiteId
+	  );
+
+	  return { rules, links };
+	}
+
+	/** In zentrale Datei upserten (aktuellen Artikel eintragen/aktualisieren) */
+	function upsertCentralNetwork(projectRoot: string, entry: NetworkLink) {
+	  const p = pathCentralNetwork(projectRoot);
+	  const nowIso = new Date().toISOString();
+	  let data = safeReadJson<CentralNetworkJson>(p);
+	  if (!data) data = { meta: { version: "1.0" }, links: [] };
+
+	  const id = entry.id || `${entry.siteId}:${entry.url}`;
+	  const normalized: NetworkLink = {
+		...entry,
+		id,
+		type: "network",
+		used: entry.used ?? 0,
+		usedBy: entry.usedBy ?? [],
+		updatedAt: nowIso,
+		keywords: (entry.keywords || []).map(k => ({ kw: k.kw, match: k.match || "phrase", anchor: k.anchor }))
+	  };
+
+	  const idxById = data.links.findIndex(l => l.id === id);
+	  const idxByUrl = data.links.findIndex(l => l.url === entry.url);
+	  const idx = idxById >= 0 ? idxById : idxByUrl;
+
+	  if (idx >= 0) {
+		data.links[idx] = { ...data.links[idx], ...normalized, updatedAt: nowIso };
+	  } else {
+		data.links.push(normalized);
+	  }
+
+	  fs.mkdirSync(path.dirname(p), { recursive: true });
+	  fs.writeFileSync(p, JSON.stringify(data, null, 2), "utf8");
+	}
+
+	/** Zentrale used-Counter erhöhen (für ausgewählte IDs) */
+	function bumpCentralNetworkUsage(projectRoot: string, usedIds: string[]) {
+	  if (!usedIds || usedIds.length === 0) return;
+	  const p = pathCentralNetwork(projectRoot);
+	  const data = safeReadJson<CentralNetworkJson>(p);
+	  if (!data || !Array.isArray(data.links)) return;
+
+	  let changed = false;
+	  for (const id of usedIds) {
+		const it = data.links.find(l => l.id === id);
+		if (it) {
+		  it.used = (it.used ?? 0) + 1;
+		  changed = true;
+		}
+	  }
+	  if (changed) {
+		fs.writeFileSync(p, JSON.stringify(data, null, 2), "utf8");
+	  }
+	}
+
+	/** String-Normalisierung für Matching */
+	function normalizeStr(s: string, opts?: { caseInsensitive?: boolean; stripDiacritics?: boolean }): string {
+	  let out = String(s || "");
+	  if (opts?.stripDiacritics) out = out.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+	  if (opts?.caseInsensitive !== false) out = out.toLowerCase();
+	  return out;
+	}
+
+	/** Keyword-Matching (exact/phrase/regex) */
+	function keywordMatches(
+	  mainKeyword: string,
+	  entryKw: string,
+	  match: "exact" | "phrase" | "regex",
+	  opts: { caseInsensitive?: boolean; stripDiacritics?: boolean }
+	): boolean {
+	  const a = normalizeStr(mainKeyword, opts);
+	  const b = normalizeStr(entryKw, opts);
+	  try {
+		if (match === "regex") return new RegExp(entryKw).test(mainKeyword);
+		if (match === "exact") return a === b;
+		// default: phrase
+		return a.includes(b) || b.includes(a);
+	  } catch {
+		return false;
+	  }
+	}
+
+	/** Scoring für Netzwerk-Linkauswahl */
+	function scoreNetworkLink(
+	  n: NetworkLink,
+	  mainKeyword: string,
+	  category: string,
+	  language: "de" | "en" | "fr",
+	  opts: { caseInsensitive?: boolean; stripDiacritics?: boolean }
+	): number {
+	  let score = 0;
+	  const kws = n.keywords || [];
+	  if (kws.some(k => keywordMatches(mainKeyword, k.kw, (k.match || "phrase"), opts))) score += 2;
+	  if ((n.categories || []).includes(category)) score += 1;
+	  if (!n.language || n.language === language) score += 1;
+	  return score;
+	}
+
+	/** Auswahl passender Netzwerk-Links (Konflikte mit intern, je group nur ein Link) */
+	function pickNetworkLinks(
+	  all: NetworkLink[],
+	  params: {
+		mainKeyword: string;
+		category: string;
+		language: "de" | "en" | "fr";
+		reservedInternal: Set<string>;
+		max: number;
+		matchOpts: { caseInsensitive?: boolean; stripDiacritics?: boolean };
+	  }
+	): NetworkLink[] {
+	  const { mainKeyword, category, language, reservedInternal, max, matchOpts } = params;
+	  const takenGroups = new Set<string>();
+	  const reserved = new Set<string>(Array.from(reservedInternal).map(k => normalizeStr(k, matchOpts)));
+
+	  const scored = all
+		.map(n => ({ n, s: scoreNetworkLink(n, mainKeyword, category, language, matchOpts) }))
+		.filter(x => x.s > 0)
+		.sort((a, b) => {
+		  const ua = (a.n.used ?? 0), ub = (b.n.used ?? 0);
+		  if (b.s !== a.s) return b.s - a.s;     // höherer Score zuerst
+		  if (ua !== ub) return ua - ub;         // dann weniger benutzt zuerst
+		  return (a.n.title || "").localeCompare(b.n.title || "");
+		});
+
+	  const picked: NetworkLink[] = [];
+	  for (const { n } of scored) {
+		if (picked.length >= max) break;
+
+		// Konflikt mit internen Keywords vermeiden
+		const kws = (n.keywords || []).map(k => normalizeStr(k.kw, matchOpts));
+		if (kws.some(k => reserved.has(k))) continue;
+
+		// pro group nur eine Seite
+		const grp = n.group || null;
+		if (grp && takenGroups.has(grp)) continue;
+
+		picked.push(n);
+		if (grp) takenGroups.add(grp);
+	  }
+	  return picked;
+	}
+
+	/** Abschnitt „Aus unserem Netzwerk“ ans Markdown anhängen */
+	function appendNetworkSection(md: string, links: NetworkLink[], language: "de" | "en" | "fr"): string {
+	  if (!links || links.length === 0) return md;
+	  const h = language === "fr" ? "Notre réseau"
+		: language === "en" ? "From our network"
+		: "Aus unserem Netzwerk";
+	  const items = links.map(l => `- [${escapeHtml(l.title)}](${l.url})`).join("\n");
+	  return `${md}\n\n---\n\n## ${h}\n\n${items}\n`;
+	}
+
+	/** Absolute Artikel-URL aus SITE_URL + Pfad bauen */
+	function buildArticleUrl(siteUrl: string | undefined, articlePath: string): string {
+	  const base = (siteUrl || "").replace(/\/+$/, "");
+	  const pathPart = articlePath.startsWith("/") ? articlePath : `/${articlePath}`;
+	  return base ? `${base}${pathPart}` : pathPart; // Fallback relativ
+	}
+
+	/** Gruppen-Key aus Keyword (für Dedupe über ähnliche Keywords) */
+	function makeGroupFromKeyword(kw: string): string {
+	  const base = kw
+		.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+		.toLowerCase()
+		.replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/(^-|-$)/g, "");
+	  return `kw:${base}`;
+	}
+
+
+	/* ======================================================================== */
+	/* =                     INLINE LINKING (NETWORK)                          = */
+	/* ======================================================================== */
+
+	/** Sichere Regex-Escapes für Literale */
+	function escapeRe(lit: string) {
+	  return String(lit).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	}
+
+	/** Einfache Erkennung, ob wir gerade innerhalb eines Code-Fence sind */
+	function buildNonCodeFenceReplacer(fn: (line: string, i: number) => string | null) {
+	  return (md: string) => {
+		const lines = md.split(/\r?\n/);
+		let inFence = false;
+		for (let i = 0; i < lines.length; i++) {
+		  const L = lines[i];
+		  // Toggle bei ``` oder ~~~
+		  if (/^\s*(```|~~~)/.test(L)) { inFence = !inFence; continue; }
+		  if (inFence) continue;
+		  const rep = fn(L, i);
+		  if (rep != null) { lines[i] = rep; return lines.join("\n"); }
+		}
+		return md;
+	  };
+	}
+
+	/** In Zeilen, die KEINE Überschrift/Quote/Liste sind und keinen Link enthalten */
+	function isInlineCandidateLine(line: string) {
+	  const L = line || "";
+	  if (/^\s{0,3}#{1,6}\s/.test(L)) return false;  // # H*
+	  if (/^\s{0,3}[-*+]\s/.test(L)) return false;   // - list
+	  if (/^\s{0,3}\d+\.\s/.test(L)) return false;   // 1. list
+	  if (/^\s{0,3}>\s/.test(L)) return false;       // > quote
+	  if (/^\s*\|.*\|\s*$/.test(L)) return false;    // | table |
+	  if (/\[(.*?)\]\((.*?)\)/.test(L)) return false; // schon Markdown-Link
+	  if (/[<>]/.test(L)) return false;              // HTML-Zeile – wird separat behandelt
+	  if (/!\[.*?\]\(.*?\)/.test(L)) return false;   // Markdown-Bild
+	  return true;
+	}
+
+
+
+	/** Wählt einen Anchor-Text für den Netzwerkkandidaten (natürlich, kurz) */
+	function pickAnchorTextForCandidate(cand: NetworkLink | undefined | null, fallback: string): string {
+	  if (!cand) return fallback;
+	  const kw = ((cand.keywords ?? []) as any[]).find(k => Array.isArray(k?.anchor) && k.anchor.length);
+	  if (kw?.anchor?.[0]) return String(kw.anchor[0]);
+	  if (cand.title) {
+		const t = String(cand.title).replace(/\s+/g, " ").trim();
+		if (t.length <= 60) return t;
+		return t.slice(0, 57) + "…";
+	  }
+	  return fallback;
+	}
+
+
+	/**
+	 * Versucht, GENAU EINEN Inline-Link im ersten passenden Absatz zu setzen.
+	 * - verlinkt nur, wenn kein interner Konflikt besteht (haben wir vorher schon gefiltert)
+	 * - modifiziert höchstens eine Zeile (erste passende)
+	 * - returns: { mdNew, inserted } — inserted = true, wenn ersetzt wurde
+	 */
+	function insertInlineNetworkLinkOnce(
+	  md: string,
+	  cand: NetworkLink | undefined | null,
+	  mainKeyword: string,
+	  matchOpts: { caseInsensitive?: boolean; stripDiacritics?: boolean } = {}
+	): { mdNew: string; inserted: boolean } {
+	  if (!cand || !cand.url) return { mdNew: md, inserted: false };
+
+	  const ci = matchOpts?.caseInsensitive;
+	  const flags: "g" | "gi" = (ci === false ? "g" : "gi");
+
+	  const phrases: string[] = [
+		...(((cand.keywords ?? []) as any[]).map(k => k?.kw).filter(Boolean) as string[]),
+		mainKeyword
+	  ].filter(Boolean);
+
+	  const anchorText = mainKeyword;
+
+	  // 1) Bevorzugt: innerhalb von <p>…</p> genau einmal im Text (keine Tags/Attribute) ersetzen
+	  const pTry = insertInlineInHtmlParagraphs(md, cand.url, anchorText, phrases, flags);
+	  if (pTry.inserted) return pTry;
+
+	// 2) Fallback: Nur in „Plaintext“-Zeilen (keine HTML/Code/Tabellen/etc.)
+	const tryReplace = buildNonCodeFenceReplacer((line) => {
+	  if (!isInlineCandidateLine(line)) return null;
+	  for (const ph of phrases) {
+		const needle = escapeRe(ph);
+		const re = new RegExp(`\\b(${needle})\\b`, flags);
+		if (re.test(line)) {
+		  let once = false; // nur ein einziges Match verlinken
+		  const replaced = line.replace(re, (m) => {
+			if (once) return m;      // weitere Matches unverändert lassen
+			once = true;
+			return `[${m}](${cand!.url})`; // m = exakt der gefundene Original-Text
+		  });
+		  if (replaced !== line) return replaced;
+		}
+	  }
+	  return null;
+	});
+
+
+	  const mdNew = tryReplace(md);
+	  const inserted = mdNew !== md;
+	  return { mdNew, inserted };
+	}
+
+
+	/** Ersetzt genau EINMAL im Text-Inhalt von <p>…</p>, ohne HTML-Tags/Attribute anzufassen */
+	function insertInlineInHtmlParagraphs(
+	  md: string,
+	  url: string,
+	  anchorText: string,
+	  phrases: string[],
+	  flags: "g" | "gi"
+	): { mdNew: string; inserted: boolean } {
+	  if (!phrases.length) return { mdNew: md, inserted: false };
+
+	  const pRe = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+	  let m: RegExpExecArray | null;
+	  let lastIndex = 0;
+	  let out = "";
+	  let inserted = false;
+
+	  while ((m = pRe.exec(md)) !== null) {
+		const before = md.slice(lastIndex, m.index);
+		const inner = m[1]; // Inhalt des <p>…</p>
+
+		// nicht anfassen, wenn schon ein Link im Absatz ist (optional, für dezente Verlinkung)
+		if (!inserted) {
+		  const parts = inner.split(/(<[^>]+>)/g); // Tags vs. Text
+		  for (let i = 0; i < parts.length && !inserted; i++) {
+			const segment = parts[i];
+			if (segment.startsWith("<")) continue; // nur Textsegmente
+			for (const ph of phrases) {
+			  const needle = escapeRe(ph);
+			  const re = new RegExp(`\\b(${needle})\\b`, flags);
+			  if (re.test(segment)) {
+				// …
+				let replacedOnce = false; // nur EINMAL pro Absatz
+				const replaced = segment.replace(
+				  re,
+				  (m) => {
+					if (replacedOnce) return m;
+					replacedOnce = true;
+					// m = genau der Text, der im Absatz steht (inkl. Groß-/Kleinschreibung)
+					return `<a href="${url}">${escapeHtml(m)}</a>`;
+				  }
+				);
+
+
+
+				if (replaced !== segment) {
+				  parts[i] = replaced;
+				  inserted = true;
+				  break;
+				}
+			  }
+			}
+		  }
+		  if (inserted) {
+			const newInner = parts.join("");
+			out += before + `<p>${newInner}</p>`;
+		  } else {
+			out += before + m[0]; // unverändert
+		  }
+		} else {
+		  out += before + m[0];
+		}
+
+		lastIndex = pRe.lastIndex;
+	  }
+
+	  if (lastIndex === 0) {
+		// kein <p>…</p> gefunden
+		return { mdNew: md, inserted: false };
+	  }
+
+	  out += md.slice(lastIndex);
+	  return { mdNew: out, inserted };
+	}
+
+
+	/* ======================================================================== */
+	/* =                     INTERNAL INLINE LINKING                           = */
+	/* ======================================================================== */
+
+	type InternalLinkCandidate = {
+	  title: string;
+	  url: string;
+	  keywords: string[]; // [mainKeyword, ...synonyms]
+	};
+
+	/** Baut absolute Artikel-URL. Falls du bereits buildArticleUrl(siteUrl, path) hast, nutze die! */
+	function buildInternalArticleUrl(siteUrl: string | undefined | null, category: string, slug: string) {
+	  const rel = `/${category}/${slug}`;
+	  if (!siteUrl) return rel;
+	  try { return new URL(rel, siteUrl).toString(); } catch { return rel; }
+	}
+
+	/** Liest _registry.json und erzeugt interne Link-Kandidaten (ohne Self-Link) */
+	function buildInternalLinkCandidates(
+	  projectRoot: string,
+	  siteId: string,
+	  siteUrl: string | undefined | null,
+	  currentCategory: string,
+	  currentSlug: string
+	): InternalLinkCandidate[] {
+	  const reg = readRegistry(projectRoot, siteId);
+	  const out: InternalLinkCandidate[] = [];
+	  if (!reg?.items?.length) return out;
+
+	  for (const it of reg.items) {
+		if (!it?.slug || !it?.category || !it?.mainKeyword) continue;
+		// Self-Link vermeiden
+		if (String(it.slug) === String(currentSlug) && String(it.category) === String(currentCategory)) continue;
+
+		const url = buildInternalArticleUrl(siteUrl, String(it.category), String(it.slug));
+		const kws = [String(it.mainKeyword)]
+		  .concat(Array.isArray(it.synonyms) ? it.synonyms.map(String) : [])
+		  .filter(Boolean);
+
+		if (!kws.length) continue;
+		out.push({ title: it.title ?? it.mainKeyword, url, keywords: kws });
+	  }
+
+	  return out;
+	}
+
+	/** Versucht EINEN Inline-Link (intern) zu setzen.
+	 *  Verhalten:
+	 *   - bevorzugt in <p>…</p> (nur Text, keine Attribute/Tags), Linktext = der GEFUNDENE Originaltext
+	 *   - Fallback: Plaintext-Zeilen (Markdown), Linktext = gefundener Originaltext
+	 *   - ersetzt maximal 1x, gibt matchedPhrase zurück
+	 */
+	function insertInlineInternalLinkOnce(
+	  md: string,
+	  url: string,
+	  phrases: string[],
+	  flags: "g" | "gi"
+	): { mdNew: string; inserted: boolean; matchedPhrase?: string } {
+	  if (!phrases?.length) return { mdNew: md, inserted: false };
+
+	  // 1) bevorzugt: <p>…</p>
+	  let matched: string | undefined;
+	  const pTry = (function insertInlineInHtmlParagraphsWithMatch(
+		md0: string,
+		url0: string,
+		phrases0: string[],
+		flags0: "g" | "gi"
+	  ): { mdNew: string; inserted: boolean } {
+		const pRe = /<p\b[^>]*>([\s\S]*?)<\/p>/gi;
+		let m: RegExpExecArray | null;
+		let lastIndex = 0;
+		let out = "";
+		let inserted = false;
+
+		while ((m = pRe.exec(md0)) !== null) {
+		  const before = md0.slice(lastIndex, m.index);
+		  const inner = m[1];
+
+		  if (!inserted) {
+			const parts = inner.split(/(<[^>]+>)/g); // Tags vs. Text
+			for (let i = 0; i < parts.length && !inserted; i++) {
+			  const segment = parts[i];
+			  if (segment.startsWith("<")) continue; // nur Textsegmente
+			  for (const ph of phrases0) {
+				const needle = escapeRe(ph);
+				const re = new RegExp(`\\b(${needle})\\b`, flags0);
+				if (re.test(segment)) {
+				  let once = false;
+				  const replaced = segment.replace(re, (mm) => {
+					if (once) return mm;
+					once = true;
+					matched = mm; // gematchter Originaltext
+					return `<a href="${url0}">${escapeHtml(mm)}</a>`;
+				  });
+				  if (replaced !== segment) {
+					parts[i] = replaced;
+					inserted = true;
+					break;
+				  }
+				}
+			  }
+			}
+			if (inserted) {
+			  const newInner = parts.join("");
+			  out += before + `<p>${newInner}</p>`;
+			} else {
+			  out += before + m[0];
+			}
+		  } else {
+			out += before + m[0];
+		  }
+
+		  lastIndex = pRe.lastIndex;
+		}
+
+		if (lastIndex === 0) return { mdNew: md0, inserted: false }; // kein <p>
+		out += md0.slice(lastIndex);
+		return { mdNew: out, inserted };
+	  })(md, url, phrases, flags);
+
+	  if (pTry.inserted) return { ...pTry, matchedPhrase: matched };
+
+	  // 2) Fallback: Plaintext-Zeilen (kein HTML/Code)
+	  const tryReplace = buildNonCodeFenceReplacer((line) => {
+		if (!isInlineCandidateLine(line)) return null;
+		for (const ph of phrases) {
+		  const needle = escapeRe(ph);
+		  const re = new RegExp(`\\b(${needle})\\b`, flags);
+		  if (re.test(line)) {
+			let once = false;
+			const replaced = line.replace(re, (mm) => {
+			  if (once) return mm;
+			  once = true;
+			  matched = mm;
+			  return `[${mm}](${url})`;
+			});
+			if (replaced !== line) return replaced;
+		  }
+		}
+		return null;
+	  });
+
+	  const mdNew = tryReplace(md);
+	  const inserted = mdNew !== md;
+	  return { mdNew, inserted, matchedPhrase: inserted ? matched : undefined };
+	}
+
+
+
+
+
+
+/* ======================================================================== */
+/* =                          TYPES & HELPERS                              = */
+/* ======================================================================== */
+
+
+
+
+type KBProduct = {
+  asin: string;
+  name: string;            // neutraler Name
+  title: string;           // Amazon-Titel
+  buyUrl: string;          // Affiliate-Link
+  imgAmazon: string;       // Amazon-Bild
+  imgAmazonWidth?: number;
+  imgAmazonHeight?: number;
+  imgAi: string;           // KI-Bild (Hero)
+  paRaw?: any;             // PA-API Roh
+};
+
+type AiCopy = {
+  title: string;
+  heroIntro: string;
+  keyTakeaways: string[];
+  criteria: { heading: string; body: string }[];
+  pros: string[];
+  cons: string[];
+  faq: { q: string; a: string }[];
+  conclusion: string;
+  seoTitle: string;
+  metaDescription: string;
+  table?: { headers: string[]; rows: string[][] };
+  productDetails?: Array<{ summary: string; bestFor?: string; keyFeatures?: string[] }>;
+};
+
+/* ======================================================================== */
+/* =                       SITE CATEGORIES (CONFIG + AI)                   = */
+/* ======================================================================== */
+
+type SiteCategory = { id: string; slug: string; title: string };
+
+/** Liest Kategorien aus sites/<siteId>/config.json – wirft Fehler, wenn keine vorhanden */
+function getSiteCategories(siteCfg: any): SiteCategory[] {
+  const list = Array.isArray(siteCfg?.categories) ? siteCfg.categories : [];
+	type RawCategory = { id?: string; slug?: string; title?: string } | null | undefined;
+
+	const sane: SiteCategory[] = (Array.isArray(siteCfg?.categories) ? siteCfg.categories : [])
+	  .map((c: RawCategory) => ({
+		id: String(c?.id || c?.slug || "").trim(),
+		slug: String(c?.slug || c?.id || "").trim(),
+		title: String(c?.title || c?.slug || c?.id || "").trim(),
+	  }))
+	  .filter((c: { slug?: string }) => Boolean(c?.slug)) as SiteCategory[];
+
+
+  if (sane.length === 0) {
+    throw new Error(
+      "Konfigurationsfehler: Keine Kategorien gefunden. Bitte 'sites/<SITE_ID>/config.json' prüfen und 5 Kategorien definieren."
+    );
+  }
+  return sane;
+}
+
+/**
+ * Lässt OpenAI die passende Kategorie bestimmen.
+ * Erwartet strenge JSON-Antwort: {"slug":"<einer-der-gültigen-slugs>"}
+ * KEIN Fallback – wirft klare Fehlermeldungen.
+ */
+async function chooseCategoryWithAI(
+  mainKeyword: string,
+  categories: SiteCategory[],
+  language: "de" | "en" | "fr"
+): Promise<SiteCategory> {
+  if (!mainKeyword || !mainKeyword.trim()) {
+    throw new Error("Kategorieauswahl fehlgeschlagen: 'mainKeyword' fehlt oder ist leer.");
+  }
+  const client = getOpenAI();
+  if (!client) {
+    throw new Error("Kategorieauswahl erfordert OpenAI: 'OPENAI_API_KEY' fehlt oder ist ungültig.");
+  }
+  if (!Array.isArray(categories) || categories.length === 0) {
+    throw new Error("Kategorieauswahl fehlgeschlagen: 'categories' ist leer.");
+  }
+
+  const catList = categories.map(c => ({ slug: c.slug, title: c.title })).slice(0, 20);
+  const sys =
+    language === "fr"
+      ? "Tu es un classificateur. Retourne UNIQUEMENT un JSON valide {\"slug\": \"...\"} correspondant à la meilleure catégorie (slug de la liste). Pas d'explication."
+      : language === "en"
+        ? "You are a classifier. Return ONLY a valid JSON {\"slug\": \"...\"} that matches the best category (slug from the list). No explanation."
+        : "Du bist ein Klassifikator. Gib NUR ein valides JSON {\"slug\": \"...\"} der am besten passenden Kategorie (Slug aus der Liste) zurück. Keine Erklärung.";
+
+  const user = { mainKeyword, categories: catList };
+
+  let txt = "";
+  try {
+    const r = await withTimeout(
+      client.chat.completions.create({
+        model: process.env.OPENAI_TEXT_MODEL ?? "gpt-4o-mini",
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: JSON.stringify(user) }
+        ],
+        response_format: { type: "json_object" } as any,
+        max_completion_tokens: 200
+      }),
+      20000
+    );
+    txt = r.choices?.[0]?.message?.content ?? "";
+  } catch (err: any) {
+    throw new Error(`Kategorieauswahl fehlgeschlagen: OpenAI-Antwort nicht erhalten (${String(err?.message || err)}).`);
+  }
+
+  let parsed: any;
+  try {
+    parsed = tryParseJsonStrict(txt);
+  } catch {
+    throw new Error(
+      `Kategorieauswahl fehlgeschlagen: OpenAI lieferte kein valides JSON. Antwort war: ${truncate(String(txt), 300)}`
+    );
+  }
+
+  const slug = String(parsed?.slug || "").trim();
+  if (!slug) {
+    throw new Error(
+      `Kategorieauswahl fehlgeschlagen: 'slug' fehlt in OpenAI-Antwort. Antwort war: ${truncate(JSON.stringify(parsed), 300)}`
+    );
+  }
+
+  const match = categories.find(c => c.slug === slug || c.id === slug);
+  if (!match) {
+    const valid = categories.map(c => c.slug).join(", ");
+    throw new Error(`Kategorieauswahl fehlgeschlagen: Unbekannter slug='${slug}'. Gültig sind: ${valid}`);
+  }
+
+  return match;
+}
+
+/**
+ * Legt (falls fehlend) Intro-Dateien pro Kategorie an:
+ * Pfad: sites/<siteId>/content/_category/<slug>.mdx  (z. B. rasen.mdx)
+ */
+
+async function ensureCategoryIntroFiles(
+  projectRoot: string,
+  siteId: string,
+  categories: SiteCategory[],
+  language: "de" | "en" | "fr"
+) {
+  const baseDir = path.join(projectRoot, "sites", siteId, "content", "_category");
+  ensureDir(baseDir);
+
+  // Lokale Helfer (unabhängig von globalen Funktionen)
+  const decodeHtmlEntities = (str: string) =>
+    String(str ?? "")
+      .replace(/&#x([0-9a-fA-F]+);/g, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+      .replace(/&#(\d+);/g, (_m, d) => String.fromCodePoint(parseInt(d, 10)))
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#039;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&amp;/g, "&");
+
+  const fixMojibake = (s: string) =>
+    String(s ?? "")
+      .replace(/Ã¼/g, "ü").replace(/Ã¶/g, "ö").replace(/Ã¤/g, "ä")
+      .replace(/Ãœ/g, "Ü").replace(/Ã–/g, "Ö").replace(/Ã„/g, "Ä")
+      .replace(/ÃŸ/g, "ß")
+      .replace(/â€“/g, "–").replace(/â€”/g, "—")
+      .replace(/â€ž/g, "„").replace(/â€œ/g, "“").replace(/â€�/g, "”")
+      .replace(/â€˜/g, "‘").replace(/â€™/g, "’")
+      .replace(/â€¢/g, "•").replace(/â€¦/g, "…");
+
+  const clean = (txt: string) =>
+    fixMojibake(decodeHtmlEntities(String(txt ?? ""))).replace(/\s+/g, " ").trim();
+
+  const client = getOpenAI();
+
+  for (const cat of categories) {
+    const outFile = path.join(baseDir, `${cat.slug}.mdx`); // z. B. sites/<id>/content/_category/rasen.mdx
+    if (fs.existsSync(outFile)) continue;
+
+    let body =
+      language === "fr"
+        ? `Découvrez nos guides et comparatifs pour **${cat.title}** : critères importants, conseils d'achat et produits recommandés.`
+        : language === "en"
+          ? `Explore our guides and comparisons for **${cat.title}**: key criteria, buying tips, and recommended products.`
+          : `Entdecke unsere Ratgeber & Vergleiche rund um **${cat.title}**: wichtige Kriterien, Kaufberatung und Produktempfehlungen.`;
+
+    if (client) {
+      try {
+        const prompt =
+          language === "fr"
+            ? `Écris un paragraphe concis (60–90 mots) d'introduction pour la catégorie « ${cat.title} » d'un site d'affiliation jardin, ton utile, SEO-friendly.`
+            : language === "en"
+              ? `Write a concise (60–90 words) category intro for “${cat.title}” on a garden affiliate site, helpful tone, SEO-friendly.`
+              : `Schreibe eine kurze (60–90 Wörter) Kategorie-Einleitung für „${cat.title}“ auf einer Garten-Affiliate-Seite, hilfreicher Ton, SEO-freundlich.`;
+
+        const resp = await withTimeout(
+          client.chat.completions.create({
+            model: process.env.OPENAI_TEXT_MODEL ?? "gpt-4o-mini",
+            messages: [
+              { role: "system", content: "Return only one plain paragraph. No lists, no code fences." },
+              { role: "user", content: prompt }
+            ],
+            temperature: 0.3,
+            max_completion_tokens: 260
+          }),
+          60000
+        );
+
+        const txtRaw = (resp.choices?.[0]?.message?.content ?? "").trim();
+        if (txtRaw) {
+          // sanft säubern + auf eine Zeile normalisieren
+          body = clean(txtRaw).replace(/\n+/g, " ");
+        }
+      } catch {
+        // Falls AI-Call scheitert, bleibt der lokale Standardtext – das ist okay
+      }
+    }
+
+    // Frontmatter sicher schreiben (ohne Tabs/Indentation; JSON.stringify zitiert YAML-sicher)
+    const fmObj = {
+      title: clean(cat.title),
+      description: clean(body),
+      slug: String(cat.slug || ""),
+    };
+    const fm =
+      `---\n` +
+      Object.entries(fmObj).map(([k, v]) => `${k}: ${JSON.stringify(v ?? "")}`).join("\n") +
+      `\n---\n` +
+      body + `\n`;
+
+    fs.writeFileSync(outFile, fm, "utf8");
+  }
+}
+
+
+/* ======================================================================== */
+/* =                          AMAZON SPEC EXTRACT                          = */
+/* ======================================================================== */
+
+function extractSpecsFromPA(pa: any, titleFallback: string) {
+  const title = firstNonEmpty(
+    gp(pa, ["ItemInfo","Title","DisplayValue"]),
+    gp(pa, ["title"]),
+    gp(pa, ["ItemInfo","ProductInfo","Title"]),
+    titleFallback
+  );
+
+  const brand = firstNonEmpty(
+    gp(pa, ["ItemInfo","ByLineInfo","Brand","DisplayValue"]),
+    gp(pa, ["brand"])
+  );
+
+  const features: string[] =
+    gp(pa, ["ItemInfo","Features","DisplayValues"]) ??
+    gp(pa, ["features"]) ??
+    gp(pa, ["FeatureBullets"]) ?? [];
+
+  const powerSrc = firstNonEmpty(
+    gp(pa, ["ItemInfo","TechnicalInfo","PowerSource","DisplayValue"]),
+    gp(pa, ["ItemInfo","TechnicalInfo","PowerSource"]),
+    ""
+  );
+
+  // Gewicht aus ItemDimensions
+  const wDisp = gp(pa, ["ItemInfo","ProductInfo","ItemDimensions","Weight","DisplayValue"]);
+  const wUnit = gp(pa, ["ItemInfo","ProductInfo","ItemDimensions","Weight","Unit"]);
+  let weight = "";
+  if (wDisp && wUnit) {
+    const unit = String(wUnit).toUpperCase();
+    let val = Number(wDisp);
+    if (!Number.isNaN(val)) {
+      if (unit.includes("POUND")) val = val * 0.45359237;
+      if (unit.includes("GRAM"))  val = val / 1000;
+      weight = `${val.toFixed(1).replace(".", ",")} kg`;
+    }
+  }
+
+  const aggText = [title, brand, features.join(" "), powerSrc].join(" • ");
+  const energy = parseEnergy(aggText) || parseEnergy(powerSrc);
+  const cutWidth = parseCutWidth(aggText);
+  const usp = pickUSP(features, brand);
+
+  return {
+    title: truncate(title || titleFallback, 100),
+    brand,
+    energy: energy || "—",
+    cutWidth: cutWidth || "—",
+    weight: weight || parseWeight(aggText) || "—",
+    usp: usp || "—"
+  };
+}
+
+/** Zusätzliche Attribut-Erkennung (generisch) */
+function collectExtraAttributes(pa: any, title: string, features: string[]): Record<string,string> {
+  const bag: Record<string,string> = {};
+  const flat = [title, ...(features || [])].join(" • ").toLowerCase();
+  const get = (...paths: string[]) => {
+    for (const p of paths) {
+      const v = gp(pa, p.split("."));
+      if (v != null && String(v).trim()) return String(v);
+    }
+    return "";
+  };
+  const m = (re: RegExp) => (flat.match(re) || [])[1];
+
+  const voltage = m(/(\d{2,3})\s?v\b/);
+  if (voltage) bag.voltage = `${voltage} V`;
+
+  const powerW = m(/(\d{2,4})\s?w\b/);
+  if (powerW) bag.powerWatts = `${powerW} W`;
+
+  const chainLen = m(/(\d{2,3})\s?cm(?=.*(kette|schwert))/);
+  if (chainLen) bag.chainLength = `${chainLen} cm`;
+
+  const cutWidth = m(/(\d{2,3})\s?cm(?=.*(schnitt|breite))/);
+  if (cutWidth) bag.cutWidth = `${cutWidth} cm`;
+
+  const flowLh = m(/(\d{2,5})\s?(?:l\/h|liter\/stunde)/);
+  if (flowLh) bag.flowRateLh = `${flowLh} L/h`;
+
+  const pressureBar = m(/(\d{1,2}(?:[.,]\d+)?)\s?bar/);
+  if (pressureBar) bag.pressureBar = `${pressureBar.replace(",", ".")} bar`;
+
+  const lumen = m(/(\d{2,5})\s?(?:lm|lumen)\b/);
+  if (lumen) bag.lumen = `${lumen} lm`;
+
+  const cct = m(/(\d{3,5})\s?k\b/);
+  if (cct) bag.colorTempK = `${cct} K`;
+
+  const capacityL = m(/(\d{1,3}(?:[.,]\d+)?)\s?l\b/);
+  if (capacityL) bag.capacityL = `${capacityL.replace(",", ".")} L`;
+
+  const runtimeMin = m(/(\d{1,3})\s?min\b/);
+  if (runtimeMin) bag.runtimeMin = `${runtimeMin} min`;
+
+  const rangeM = m(/(\d{1,3})\s?m\b(?=.*(reichweite|spritzweite|leuchtweite))/);
+  if (rangeM) bag.rangeM = `${rangeM} m`;
+
+  const materialMatch = (flat.match(/\b(edelstahl|aluminium|stahl|holz|rattan|polyrattan|kunststoff|polypropylen|polyethylen)\b/) || [])[1];
+  if (materialMatch) bag.material = materialMatch;
+
+  const colorMatch = (flat.match(/\b(schwarz|weiß|weiss|grau|anthrazit|braun|grün|blau|beige|natur)\b/) || [])[1];
+  if (colorMatch) bag.color = colorMatch;
+
+  const dims = (flat.match(/(\d{2,3})\s?[x×]\s?(\d{2,3})\s?[x×]\s?(\d{2,3})\s?cm/) || []);
+  if (dims[1] && dims[2] && dims[3]) bag.dimensions = `${dims[1]}×${dims[2]}×${dims[3]} cm`;
+
+  const seats = m(/(\d)\s?(?:personen|sitzpl(?:atz|ätze)?)/);
+  if (seats) bag.seats = `${seats} Pers.`;
+
+  return bag;
+}
+
+/** Spalten-Auswahl (Heuristik + Fallback) */
+function normalizeKeyword(s: string) {
+  return (s || "").toLowerCase();
+}
+
+/* ======================================================================== */
+/* =                      BRAND/MODEL STRING HELPER                        = */
+/* ======================================================================== */
+
+/** "Marke Produkt Modell" aus PA/Title ableiten – ohne Ellipsen, kurz & sauber */
+/** "Marke Produkt Modell" – kurz & sauber, mit Keyword-Hinweis */
+function buildBrandModel(
+  pa: any,
+  fallbackTitle: string,
+  fallbackName = "",
+  keyword?: string
+): string {
+  const brand = firstNonEmpty(
+    gp(pa, ["ItemInfo","ByLineInfo","Brand","DisplayValue"]),
+    gp(pa, ["brand"]),
+    ""
+  ).trim();
+
+  const rawTitle = firstNonEmpty(
+    gp(pa, ["ItemInfo","Title","DisplayValue"]),
+    fallbackTitle,
+    fallbackName
+  );
+
+  const title = String(rawTitle || "").trim();
+
+  // --- 1) Kategorie/Synonyme erkennen ---
+  const L = (keyword ? `${keyword} ${title}` : title).toLowerCase();
+
+  const CANON_TYPES: Record<string, string> = {
+    "hochbeet": "Hochbeet",
+    "pflanzkasten": "Hochbeet",
+    "pflanzkuebel": "Hochbeet",
+    "pflanzkübel": "Hochbeet",
+    "frühbeet": "Hochbeet",
+    "fruehbeet": "Hochbeet",
+    "kräuterbeet": "Hochbeet",
+    "kraeuterbeet": "Hochbeet",
+
+    "mähroboter": "Mähroboter",
+    "maehroboter": "Mähroboter",
+    "rasenroboter": "Mähroboter",
+
+    "rasenmäher": "Rasenmäher",
+    "rasenmaeher": "Rasenmäher",
+    "rasentrimmer": "Rasentrimmer",
+    "heckenschere": "Heckenschere",
+    "kettensäge": "Kettensäge",
+    "kettensaege": "Kettensäge",
+  };
+
+  let type = "";
+  for (const k in CANON_TYPES) {
+    if (L.includes(k)) { type = CANON_TYPES[k]; break; }
+  }
+
+  // --- 2) Aussagekräftige Adjektive (max 1) ---
+  const ADJ = ["rechteckig", "rund", "eckig", "kompakt"];
+  const adj = ADJ.find(a => L.includes(a)) || "";
+
+  // --- 3) Feature-Phrasen ---
+  const features: string[] = [];
+  if (/\bohne\s+begrenzungskabel\b/i.test(title)) features.push("ohne Begrenzungskabel");
+
+  // --- 4) Modellextraktion (Großbuchstaben/Ziffern & bekannte Marker) ---
+  // Wir nehmen Tokens, die "modell-typisch" wirken, aber filtern Maße/Farbwörter raus.
+  const EXCLUDE = /\b(\d+\s?(cm|mm|m|l|kg|w|v|bar)\b|[0-9]+x[0-9]+(x[0-9]+)?\s?(cm|mm)?\b|schwarz|weiß|weiss|grau|anthrazit|silber|braun|grün|blau|beige|natur)\b/i;
+  const MODEL_MARKERS = /(mini|pro|max|plus|se|awD|awd|luba|netrtk|\b[0-9]{2,4}\b|[A-Z]{2,}|[A-Z0-9\-]{2,})/;
+
+  // Titel in Wörter (Originalreihenfolge)
+  const words = title.split(/[\s,;:/|]+/).filter(Boolean);
+
+  // Wenn eine Marke vorne steht, dahinter schauen
+  let startIdx = 0;
+  if (brand && words[0] && words[0].toLowerCase().startsWith(brand.toLowerCase())) {
+    startIdx = 1;
+  }
+
+  const modelTokens: string[] = [];
+  for (let i = startIdx; i < words.length; i++) {
+    const w = words[i];
+    const lw = w.toLowerCase();
+    if (EXCLUDE.test(w)) continue;           // Maße/Farben/Einheiten raus
+    if (/^\d+x\d+/.test(lw)) continue;       // 180x90x60cm etc. raus
+    if (MODEL_MARKERS.test(w)) modelTokens.push(w);
+    // Begrenzung: nicht zu lang
+    if (modelTokens.length >= 6) break;
+  }
+
+  // Spezialfall: Wenn Type leer ist, versuche erstes sinnvolles Hauptwort
+  if (!type) {
+    const fallbackType = (title.match(/\b(Hochbeet|Mähroboter|Rasenmäher|Rasentrimmer|Heckenschere|Kettensäge)\b/i) || [])[0];
+    if (fallbackType) type = fallbackType;
+  }
+
+  // Mammotion-Beispiel: Re-Ordering "Mähroboter" + Feature + Modell
+  // ok-living-Beispiel: "Hochbeet rechteckig" (ohne Synonym-Redundanz)
+  const parts = [
+    brand || "",
+    type || "",
+    adj || "",
+    ...(features.length ? [features.join(" ")] : []),
+    ...(modelTokens.length ? [modelTokens.join(" ")] : []),
+  ].filter(Boolean);
+
+  // Doppelte Whitespaces kappen
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
+
+
+
+
+function chooseTableColumnsAndRows(keyword: string, prods: KBProduct[]): { headers: string[]; rows: string[][] } {
+  const kw = (keyword || "").toLowerCase();
+
+  // Hilfsfunktion: kurze, prägnante Modellbezeichnung (Marke + Modell/Serie), max. 50 Zeichen
+  function shortenModelTitle(fullTitle: string, brand: string): string {
+    const t = (fullTitle || "").trim();
+    const b = (brand || "").trim();
+
+    // Entferne überflüssige Zusätze/Noise aus Amazon-Titeln
+    let core = t
+      // Klammerinhalte, z. B. Größenangaben
+      .replace(/\s*\([^)]*\)/g, " ")
+      // Nach Doppelpunkt/Strich wird oft Marketing/Shop-Info angehängt
+      .split(" - ")[0]
+      .split(" | ")[0]
+      .split(":")[0]
+      .trim();
+
+    // Falls Marke nicht vorn steht, voranstellen
+    if (b && !core.toLowerCase().startsWith(b.toLowerCase())) {
+      core = `${b} ${core}`;
+    }
+
+    // Extrem lange Ketten (z. B. 5+ Wörter) ein wenig stutzen
+    const words = core.split(/\s+/);
+    if (words.length > 9) {
+      core = words.slice(0, 9).join(" ");
+    }
+
+    // Hartes Limit
+    if (core.length > 50) core = core.slice(0, 47).trimEnd() + "…";
+    return core.trim();
+  }
+
+  // 1) Roh-Attribute je Produkt zusammenstellen
+  const enriched = prods.map(p => {
+    const pa = p.paRaw || {};
+    const title = firstNonEmpty(gp(pa, ["ItemInfo","Title","DisplayValue"]), p.title, p.name, p.asin);
+    const features: string[] =
+      gp(pa, ["ItemInfo","Features","DisplayValues"]) ?? gp(pa, ["features"]) ?? [];
+    const basic = extractSpecsFromPA(pa, p.title);
+    const specBasic = {
+      brand: basic.brand || "",
+      weight: basic.weight,          // „x,x kg“ oder „—“
+      energy: basic.energy,          // Akku/Netz/Benzin/—
+      cutWidth: basic.cutWidth,      // „xx cm“ oder „—“
+      usp: basic.usp,                // kurzer USP oder „—“
+      title: p.title || title
+    };
+    const extra = collectExtraAttributes(pa, title, features);
+    return { p, spec: { ...specBasic, ...extra } };
+  });
+
+  // 2) Kaufrelevante Prioritäten (eng am Entscheidungsnutzen ausgerichtet)
+  //    → Modell (immer), dann nach Kategorie-Booster, dann sinnvolle Fallbacks
+  const buyerCore = ["energy","cutWidth","capacityL","dimensions","weight","usp"];
+  const boosts: Record<string, string[]> = {
+    // Rasen/Trimmen/Mähen → Energie, Schnittbreite, Gewicht, USP
+    "rasen": ["energy","cutWidth","weight","usp"],
+    "trimmer": ["energy","cutWidth","weight","usp"],
+    "mäher": ["cutWidth","energy","weight","usp"],
+
+    // Kettensägen → Spannung, Schwertlänge, Gewicht, Laufzeit
+    "kette": ["voltage","chainLength","weight","runtimeMin"],
+
+    // Bewässerung/Hochdruck → Durchfluss, Druck, Reichweite, Leistung
+    "bewässer": ["flowRateLh","pressureBar","rangeM","powerWatts"],
+    "druck":    ["pressureBar","flowRateLh","powerWatts","rangeM"],
+
+    // Beleuchtung → Lumen, Farbtemp, Leistung, Reichweite
+    "leucht": ["lumen","colorTempK","powerWatts","rangeM"],
+
+    // Möbel/Beete → Maße/Kapazität, Material, Gewicht/Tragendes
+    "möbel": ["seats","dimensions","material","weight"],
+    "beet":  ["dimensions","capacityL","material","weight"],
+    "pflanz":["dimensions","capacityL","material","weight"],
+
+    // Grill/Outdoor-Küche → Leistung, Maße, Material/Gewicht
+    "grill": ["powerWatts","dimensions","material","weight"]
+  };
+
+  let pref: string[] = [];
+  for (const k of Object.keys(boosts)) {
+    if (kw.includes(k)) { pref = boosts[k]; break; }
+  }
+
+  // Breiter, aber geordneter Fallback-Pool
+  const fallbackPool = [
+    ...buyerCore,
+    "voltage","powerWatts","chainLength","flowRateLh","pressureBar",
+    "lumen","colorTempK","runtimeMin","rangeM","material","seats","color"
+  ];
+
+  const preferredOrdered = [...new Set([...(pref || []), ...buyerCore, ...fallbackPool])];
+
+  // 3) Verfügbarkeit je Attribut zählen
+  const availability: Record<string, number> = {};
+
+	for (const { spec } of enriched as Array<{ spec: ProductSpec }>) {
+	  const s = spec as Record<string, unknown>;
+	  for (const k of Object.keys(s)) {
+		const v = s[k];
+		if (v === null || v === undefined || v === "") continue;
+		if (!availability[k]) availability[k] = 0;
+		availability[k]++;
+	  }
+	}
+
+
+  // 4) Spalten bestimmen (max. 5 gesamt, inkl. Modell)
+  const headers: string[] = ["Modell"];
+  for (const key of preferredOrdered) {
+    if (headers.length >= 5) break;
+    if (key === "title" || key === "brand") continue; // in „Modell“ enthalten
+    if (availability[key] && availability[key] > 0) {
+      headers.push(key);
+    }
+  }
+  while (headers.length < 5) headers.push("—"); // Lücken sauber auffüllen
+
+  // 5) Zeilen bauen – „Modell“ kurz & prägnant
+  const rows = enriched.map(({ p, spec }) => {
+    const cells: string[] = [];
+	type ProductSpec = { [key: string]: unknown }; // falls noch nicht oben definiert
+	const s = spec as Record<string, unknown>;
+
+	for (const h of headers) {
+	  if (h === "Preis") {
+		cells.push("�");
+		continue;
+	  }
+	  const v = s[h as string];
+	  cells.push(v === null || v === undefined || v === "" ? "�" : String(v));
+	}
+	return cells;
+
+  });
+
+  return { headers, rows };
+}
+
+
+/* ======================================================================== */
+/* =                          AI TEXT GENERATION                           = */
+/* ======================================================================== */
+// ====== TITLE CANDIDATES (clickbait + SEO) ======
+type TitleCandidateOpts = {
+  textModel: string;
+  min?: number; // min Titelanzahl
+  max?: number; // max Titelanzahl
+};
+
+function dedupeTitles(list: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of list.map(s => (s || "").trim()).filter(Boolean)) {
+    const k = t.toLowerCase();
+    if (!seen.has(k)) { seen.add(k); out.push(t); }
+  }
+  return out;
+}
+
+/** simple length score: sweet spot ~ 45–65 chars (German SERP-tauglich) */
+function scoreLen(s: string) {
+  const n = s.length;
+  if (n >= 45 && n <= 65) return 20;
+  if (n >= 35 && n <= 75) return 12;
+  if (n >= 25 && n <= 85) return 6;
+  return 0;
+}
+
+/** Heuristik-Scorer: Keyword, Zahlen, Klammern, Power-Wörter, Strafpunkte für Spam */
+function scoreTitle(t: string, keyword: string): number {
+  const s = t.trim();
+  let sc = 0;
+  const T = s.toLowerCase();
+  const K = keyword.trim().toLowerCase();
+
+  // Länge
+  sc += scoreLen(s);
+
+  // Keyword
+  if (T.includes(K)) sc += 22;
+
+  // Buying-Intent (Kaufberatung/…)
+  if (isBuyingIntent(s)) sc += 18;
+
+  // Zahlen/Brackets/Powerwörter (wie gehabt)
+  if (/\d/.test(s)) sc += 6;
+  if (/[([][^)\]]+[)\]]/.test(s)) sc += 4;
+  if (/(vergleich|kaufberatung|ratgeber|guide|checkliste|tipps)/i.test(s)) sc += 6;
+
+  // Strafpunkte
+  if ((s.match(/!/g) || []).length > 1) sc -= 8;
+  if (/[A-ZÄÖÜ]{6,}/.test(s)) sc -= 6;
+  if (s.length > 90) sc -= 10;
+  if (/[\|\-–—]\s*[\|\-–—]/.test(s)) sc -= 4;
+
+  // reine „Tipps“ ohne Intent leicht runter
+  if (/tipps?/i.test(s) && !isBuyingIntent(s)) sc -= 8;
+
+  return sc;
+}
+
+
+function isBuyingIntent(t: string): boolean {
+  const T = t.toLowerCase();
+  return /(kaufberatung|vergleich|ratgeber|guide)\b/.test(T);
+}
+function forbidden(t: string): boolean {
+  // „Text“ (genau das Wort) nie erlauben
+  if (/\btext\b/i.test(t)) return true;
+  // reine „5 Tipps …“ ohne Buying-Intent rauswerfen
+  if (/^\s*\d+\s+tipps?/i.test(t) && !isBuyingIntent(t)) return true;
+  return false;
+}
+
+
+function pickBestTitle(cands: string[], keyword: string): string {
+  const cleaned = dedupeTitles(cands)
+    .map(x => x.replace(/\s+/g, " ").trim())
+    .filter(x => !forbidden(x));              // <<<< Filter hier
+
+  if (cleaned.length === 0) return `Kaufberatung: ${keyword}`;
+  let best = cleaned[0];
+  let bestScore = -1e9;
+  for (const t of cleaned) {
+    const sc = scoreTitle(t, keyword);
+    if (sc > bestScore) { bestScore = sc; best = t; }
+  }
+  return best;
+}
+
+
+/** Lässt OpenAI 4–8 Titel liefern (Deutsch, klickstark aber nicht spammy) */
+async function generateTitleCandidates(
+  language: "de" | "en" | "fr",
+  keyword: string,
+  products: KBProduct[],
+  opts: TitleCandidateOpts
+): Promise<string[]> {
+  const client = getOpenAI();
+  if (!client) return [];
+  const min = Math.max(4, Math.min(8, opts?.min ?? 6));
+  const max = Math.max(min, Math.min(8, opts?.max ?? 8));
+  const model = opts?.textModel || process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini";
+
+  const sys =
+  language === "de"
+    ? "Du bist ein deutscher SEO-Titelgenerator. Gib NUR valides JSON {\"titles\":[\"...\"]} zurück. Keine Erklärungen."
+    : language === "fr"
+      ? "Tu es un générateur de titres SEO en français. Retourne UNIQUEMENT un JSON valide {\"titles\":[\"...\"]}."
+      : "You are an SEO title generator. Return ONLY valid JSON {\"titles\":[\"...\"]}.";
+
+
+  const productHints = products.map(p => p.title || p.name || p.asin).slice(0, 6);
+
+  const user = {
+  language,
+  mainKeyword: keyword,
+  constraints: {
+    count: { min, max },
+    length: { sweetSpot: "45-65 chars" },
+    mustContainKeyword: true,
+    // >>> Hier schärfen:
+    mustContainOneOf: ["Kaufberatung", "Vergleich", "Ratgeber", "Guide"],
+    forbidWords: ["Text"],                     // „Text“ darf nie vorkommen
+    avoidPatterns: ["^\\d+\\s+Tipps?"],        // reine „5 Tipps …“-Titel vermeiden
+    style: "klarer Buying-Intent (Kaufberatung/Produktvergleich), natürliches Deutsch, dezent klickstark; max. 1 Ausrufezeichen; keine ALL CAPS.",
+    avoid: "doppelte Trenner, Füllwörter, ‚Text‘, reine Tipps-Listen ohne Kaufberatung/vergleich"
+  },
+  contextProducts: productHints
+};
+
+  const r = await withTimeout(
+    client.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: JSON.stringify(user) }
+      ],
+      response_format: { type: "json_object" } as any,
+      max_completion_tokens: 300
+    }),
+    30000
+  );
+
+  const raw = r.choices?.[0]?.message?.content ?? "";
+  try {
+    const parsed = tryParseJsonStrict(raw);
+    const arr = Array.isArray(parsed?.titles) ? parsed.titles.map(String) : [];
+    return dedupeTitles(arr).slice(0, max);
+  } catch {
+    return [];
+  }
+}
+
+
+
+
+function buildProductContext(prods: KBProduct[]) {
+  return prods.map(p => ({
+    asin: p.asin,
+    name: p.name,
+    title: p.title,
+    hasImage: Boolean(p.imgAmazon),
+    url: p.buyUrl,
+  }));
+}
+
+// === Robust JSON helpers (sanitizer + best-effort parse) ===
+function stripCodeFences(raw: string): string {
+  const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence?.[1]) return fence[1].trim();
+  return raw.trim();
+}
+function extractLargestJsonObject(raw: string): string {
+  const s = raw.indexOf("{");
+  const e = raw.lastIndexOf("}");
+  if (s >= 0 && e > s) return raw.slice(s, e + 1);
+  return raw;
+}
+function normalizeQuotes(raw: string): string {
+  return raw.replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+            .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"');
+}
+function repairJson(raw: string): string {
+  let s = raw.replace(/^\uFEFF/, "");
+  s = normalizeQuotes(s);
+  s = stripCodeFences(s);
+  s = extractLargestJsonObject(s);
+  s = s.replace(/,\s*([\]}])/g, "$1");
+  s = s.replace(/([{\s,])([A-Za-z0-9_]+)\s*:/g, (_m, p1, key) => `${p1}"${key}":`);
+  s = s.replace(/'([^']*)'/g, (_m, g1) => `"${g1.replace(/"/g, '\\"')}"`);
+  return s.trim();
+}
+function tryParseJsonStrict(raw: string): any {
+  try { return JSON.parse(raw); } catch {}
+  try { return JSON.parse(repairJson(raw)); } catch {}
+  try { return JSON.parse(extractLargestJsonObject(raw)); } catch {}
+  throw new Error("Modell lieferte kein valides JSON.");
+}
+
+
+
+async function jsonReformatWithOpenAI(
+  bad: string,
+  modelForFix: string,
+  jsonSchema?: any
+): Promise<any> {
+  const client = getOpenAI();
+  if (!client) throw new Error("OPENAI_API_KEY fehlt (JSON-Reformat).");
+  const response_format = { type: "json_object" } as any;
+
+	const res = await withTimeout(
+	  client.chat.completions.create({
+		model: modelForFix,
+		messages: [
+		  { role: "system", content: "You are a JSON sanitizer. Return ONLY a single valid JSON object. No markdown, no prose." },
+		  { role: "user", content: `Fix this into valid JSON object (keep semantics, arrays, strings):\n\n${bad}` }
+		],
+		response_format: { type: "json_object" },
+		max_completion_tokens: 1800
+	  }),
+	  120000 // vorher 60000 – robuster machen
+	);
+
+  const txt = res.choices?.[0]?.message?.content ?? "";
+  return tryParseJsonStrict(txt);
+}
+
+
+// AI-Debug Logging
+async function writeAiDebug(label: string, content: string) {
+  try {
+    const enabled = process.env.DEBUG_AI !== "0";
+    if (!enabled) return;
+    const siteId = process.env.SITE_ID || "garden-hero";
+    const projectRoot = process.cwd();
+    const dir = path.join(projectRoot, "sites", siteId, "content", "_ai-debug");
+    await fs.promises.mkdir(dir, { recursive: true });
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const safe = String(label || "log").replace(/[^a-z0-9\-_.]/gi, "_");
+    const file = path.join(dir, `${ts}__${safe}.txt`);
+    await fs.promises.writeFile(file, String(content ?? ""), "utf8");
+  } catch {}
+}
+
+
+async function generateAiCopyFromKeyword(
+  language: "de" | "en" | "fr",
+  mainKeyword: string,
+  products: KBProduct[],
+  opts: { textModel: string; force?: boolean; fallbackModel?: string }
+): Promise<AiCopy> {
+  const client = getOpenAI();
+  if (!client) throw new Error("OPENAI_API_KEY fehlt/ungültig – AI-Texte können nicht erzeugt werden.");
+
+  const lang = (language || "de") as "de" | "en" | "fr";
+  const nonce = opts.force ? `#v=${Date.now()}` : `#n=${Math.round(Math.random() * 1e9)}`;
+  const model1 = opts.textModel || process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini";
+  const modelFix = opts.fallbackModel || process.env.OPENAI_TEXT_MODEL_FALLBACK || "gpt-4o-mini";
+
+  const productNames = products.map(p => p.title || p.name || p.asin).join(" | ");
+
+  const system =
+`You are an expert German SEO copywriter for a garden-focused affiliate site.
+Write natural German, concise but substantive. Use short paragraphs and subheadings.
+
+CONTENT REQUIREMENTS (hard):
+- Hero intro: 2–3 sentences, must mention the exact main keyword once.
+- Criteria: 5–8 distinct criteria; each with a short heading (NO numbering) + 3-5 sentences body.
+- Pros: ≥5 items; Cons: ≥3 items (concise bullet points).
+- FAQ: 5–10 Q&A; each answer must have exactly 3–5 sentences (<= 400 chars).
+- Product details: For each product, the "summary" MUST be 4–6 sentences in German (concise, benefits-focused).
+- Conclusion: 5–7 sentences, summarizing key decisions; mention main keyword once.
+
+SEO:
+- Target “Kaufberatung ${mainKeyword}”.
+- Use main keyword sparingly (no stuffing).
+
+COMPLIANCE:
+- No prices, no user reviews, no unverifiable claims, no medical/safety advice beyond obvious basics.
+
+OUTPUT FORMAT:
+Return ONLY a single valid JSON object (no markdown, no code fences).
+Keys:
+title, heroIntro, keyTakeaways, criteria[{heading,body}], pros, cons, faq[{q,a}], conclusion,
+seoTitle, metaDescription, table{headers[],rows[][]}, productDetails[{summary,bestFor,keyFeatures[]}]
+`;
+
+  const user = {
+    task: "Generate buying-guide copy (German, SEO, strict JSON)",
+    language: lang,
+    mainKeyword,
+    productsContext: products.map(p => ({
+      asin: p.asin,
+      title: p.title || p.name || "",
+      img: Boolean((p as any).imgAmazon),
+      url: (p as any).buyUrl || ""
+    })),
+    variationHint: `Use mainKeyword="${mainKeyword}" (exact string) and consider products: ${productNames}. ${nonce}`,
+    formattingRules: {
+      heroIntro: { minSentences: 2, maxSentences: 3 },
+      criteria: { min: 5, max: 8, bodySentences: { min: 3, max: 5 } },
+      pros: { min: 5 }, cons: { min: 3 },
+      faq: { min: 5, max: 10, answerSentences: 3, maxAnswerChars: 400 },
+      productDetails: { summarySentences: { min: 4, max: 6 } },
+      conclusion: { minSentences: 5, maxSentences: 7 }
+    }
+  };
+
+  // exakt wie vorher: reines JSON-Objekt format
+  const response_format = { type: "json_object" } as any;
+
+  // ===== Versuch #1 =====
+  let raw1 = "";
+  try {
+    const resp1 = await withTimeout(
+	  client.chat.completions.create({
+		model: model1,
+		messages: [
+		  { role: "system", content: system + "\n\nReturn ONLY JSON. No markdown. No code fences. No commentary." },
+		  { role: "user", content: JSON.stringify(user) }
+		],
+		// mehr Output erlauben:
+		max_completion_tokens: 2400,
+		response_format: { type: "json_object" }
+	  }),
+	  120000 // vorher 90000 – hier explizit 120s
+	);
+
+    raw1 = resp1.choices?.[0]?.message?.content ?? "";
+    await writeAiDebug("copy-try1", raw1);
+
+    const parsed1 = tryParseJsonStrict(raw1);
+    const copy1 = normalizeAiCopy(mainKeyword, products, parsed1);
+    if (typeof (globalThis as any).enforceContentMinimums === "function") {
+      (globalThis as any).enforceContentMinimums(copy1);
+    }
+    return copy1;
+  } catch (e1: any) {
+    await writeAiDebug("copy-try1-error", String(e1?.message ?? e1));
+  }
+
+  // ===== Versuch #2: lokale Reparatur =====
+  try {
+    const parsed2 = tryParseJsonStrict(raw1);
+    const copy2 = normalizeAiCopy(mainKeyword, products, parsed2);
+    if (typeof (globalThis as any).enforceContentMinimums === "function") {
+      (globalThis as any).enforceContentMinimums(copy2);
+    }
+    return copy2;
+  } catch (e2: any) {
+    await writeAiDebug("copy-try2-localrepair-error", String(e2?.message ?? e2));
+  }
+
+  // ===== Versuch #3: Reformat mit Fallback-Modell =====
+  try {
+    const fixed = await jsonReformatWithOpenAI(raw1, modelFix);
+    await writeAiDebug("copy-reformat", JSON.stringify(fixed));
+    const copy3 = normalizeAiCopy(mainKeyword, products, fixed);
+    if (typeof (globalThis as any).enforceContentMinimums === "function") {
+      (globalThis as any).enforceContentMinimums(copy3);
+    }
+    return copy3;
+  } catch (e3: any) {
+    await writeAiDebug("copy-reformat-error", String(e3?.message ?? e3));
+  }
+
+  throw new Error("AI copy generation failed: no valid JSON after 3 attempts");
+}
+
+
+
+// required-field helper
+function ensureField<T>(val: T | undefined, field: string): T {
+  if (
+    val === undefined ||
+    val === null ||
+    (typeof val === "string" && val.trim().length === 0) ||
+    (Array.isArray(val) && val.length === 0)
+  ) {
+    throw new Error(`AI did not provide required field: ${field}`);
+  }
+  return val;
+}
+
+function normalizeSentencesToRange(
+  text: string,
+  min = 4,
+  max = 6,
+  features?: string[]
+): string {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+
+  // naive Satztrennung an . ! ?
+  let sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
+
+  // wenn zu kurz: aus keyFeatures weitere Sätze bauen
+  if (sentences.length < min) {
+    const extras = (features || [])
+      .map(f => String(f || "").trim())
+      .filter(Boolean)
+      .map(f => {
+        // kurze, sachliche Zusatzsätze aus Features formen
+        const base = f.replace(/[.;:\s]+$/g, "");
+        return base ? `${base}.` : "";
+      })
+      .filter(Boolean);
+
+    for (const ex of extras) {
+      if (sentences.length >= min) break;
+      sentences.push(ex);
+    }
+  }
+
+  // wenn zu lang: auf max begrenzen
+  if (sentences.length > max) {
+    sentences = sentences.slice(0, max);
+  }
+
+  return sentences.join(" ");
+}
+
+
+
+/** Repariert Mojibake (z. B. "Ã¼") nur wenn verdächtige Muster oder � vorkommen. */
+function fixMojibake(s: string): string {
+  if (!s) return s as any;
+  if (/[ÃÂâ]|�/.test(s)) {
+    try {
+      const candidate = Buffer.from(s, "latin1").toString("utf8");
+      // Übernehme nur, wenn es _besser_ ist (weniger �, weniger Ã etc.)
+      const bad = (t: string) => (t.match(/[ÃÂâ]|�/g) || []).length;
+      if (bad(candidate) < bad(s)) return candidate;
+    } catch {}
+  }
+  return s;
+}
+
+
+
+/** HTML-Entities → echte Zeichen (benannte + numerische, dezimal & hex) */
+function decodeHtmlEntities(str: string): string {
+  if (!str) return "";
+  let s = String(str);
+
+  // numerische (hex) zuerst
+  s = s.replace(/&#x([0-9a-fA-F]+);/g, (_m, hex) => {
+    try { return String.fromCodePoint(parseInt(hex, 16)); } catch { return _m; }
+  });
+
+  // numerische (dezimal)
+  s = s.replace(/&#(\d+);/g, (_m, dec) => {
+    try { return String.fromCodePoint(parseInt(dec, 10)); } catch { return _m; }
+  });
+
+  // benannte
+  s = s
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#039;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    // &amp; ganz zum Schluss:
+    .replace(/&amp;/g, "&");
+
+  return s;
+}
+
+
+
+function normalizeAiCopy(mainKeyword: string, products: KBProduct[], parsed: any): AiCopy {
+  // ---- Sanitizer (wie gehabt) ----
+  const norm = (x: string) => {
+    let v = String(x ?? "");
+    v = decodeHtmlEntities(v);
+    v = fixMojibake(v);
+    return v.replace(/\s+/g, " ").trim();
+  };
+
+  // Alles zu Array "biegen"
+  const toArray = (v: any): any[] =>
+    Array.isArray(v) ? v : (v == null ? [] : (typeof v === "string" ? [v] : [v]));
+
+  // ---- Pflichtfelder (Strings) ----
+  const title      = norm(ensureField<string>(parsed?.title, "title"));
+  const heroIntro  = norm(ensureField<string>(parsed?.heroIntro, "heroIntro"));
+  const conclusion = norm(ensureField<string>(parsed?.conclusion, "conclusion"));
+  const seoTitle   = norm(ensureField<string>(parsed?.seoTitle, "seoTitle"));
+  const metaDesc   = norm(ensureField<string>(parsed?.metaDescription, "metaDescription"));
+
+  // ---- Arrays defensiv koerzieren ----
+  const keyTakeawaysRaw = ensureField<any[]>(toArray(parsed?.keyTakeaways), "keyTakeaways");
+  const prosRaw         = ensureField<any[]>(toArray(parsed?.pros), "pros");
+  const consRaw         = ensureField<any[]>(toArray(parsed?.cons), "cons");
+
+  // criteria: wenn string → zu {heading:<string>, body:"—"} machen
+  const criteriaInput = Array.isArray(parsed?.criteria) ? parsed?.criteria : toArray(parsed?.criteria);
+  const criteriaRaw   = ensureField<any[]>(criteriaInput, "criteria").map((c: any) =>
+    (c && typeof c === "object")
+      ? c
+      : { heading: String(c ?? "Kriterium"), body: "—" }
+  );
+
+  // faq: wenn string → zu {q:<string>, a:"—"} machen
+  const faqInput = Array.isArray(parsed?.faq) ? parsed?.faq : toArray(parsed?.faq);
+  const faqRaw   = ensureField<any[]>(faqInput, "faq").map((f: any) =>
+    (f && typeof f === "object")
+      ? f
+      : { q: String(f ?? "Frage"), a: "—" }
+  );
+
+  // productDetails: defensiv zu Array + Felder sichern, Rest in normalize unten
+  const productDetRaw = ensureField<any[]>(toArray(parsed?.productDetails).slice(0, 4), "productDetails");
+
+  // ---- Tabelle: bei Unsinn Auto-Table aus Heuristik nehmen ----
+  let tableHeadersRaw = toArray(parsed?.table?.headers);
+  let tableRowsRaw    = Array.isArray(parsed?.table?.rows) ? parsed?.table?.rows : [];
+
+  if (tableHeadersRaw.length === 0 || tableRowsRaw.length === 0) {
+    const auto = chooseTableColumnsAndRows(mainKeyword, products);
+    tableHeadersRaw = auto.headers;
+    tableRowsRaw    = auto.rows;
+  }
+
+  // ---- Normierte Arrays ----
+  const keyTakeaways = keyTakeawaysRaw.map((v: any) => norm(String(v)));
+  const pros         = prosRaw.map((v: any) => norm(String(v)));
+  const cons         = consRaw.map((v: any) => norm(String(v)));
+
+  const criteria = criteriaRaw.map((c: any, i: number) => {
+    const heading = norm(String(c?.heading ?? `Kriterium ${i + 1}`)).replace(/^Kriterium\s*\d+:\s*/i, "");
+    const body    = norm(String(c?.body ?? "—"));
+    return { heading, body };
+  });
+
+  const faq = faqRaw.map((f: any, i: number) => {
+    const q = norm(String(f?.q ?? `Frage ${i + 1}`));
+    const a = norm(String(f?.a ?? "—"));
+    return { q, a };
+  });
+
+  const productDetails = productDetRaw.map((d: any, i: number) => {
+    const bestFor        = norm(String((d?.bestFor ?? "Typische Gartenaufgaben")));
+    const keyFeaturesArr = toArray(d?.keyFeatures).map((v:any)=>norm(String(v)));
+    let summary          = norm(String(d?.summary ?? "Kurzer Überblick: Stärken im Garten-Alltag."));
+    summary              = normalizeSentencesToRange(summary, 4, 6, keyFeaturesArr);
+    return { summary, bestFor, keyFeatures: keyFeaturesArr.length ? keyFeaturesArr : ["Solide Grundleistung", "Alltagstauglich", "Einfache Bedienung"] };
+  });
+
+  // Fehlende productDetails bis 4 auffüllen (falls Modell <4 geliefert hat)
+  while (productDetails.length < 4) {
+    productDetails.push({
+      summary: "Kurzer Überblick: Stärken im Garten-Alltag.",
+      bestFor: "Typische Gartenaufgaben",
+      keyFeatures: ["Solide Grundleistung", "Alltagstauglich", "Einfache Bedienung"]
+    });
+  }
+
+  // Tabelle final normalisieren
+  const table = {
+    headers: tableHeadersRaw.map((h: any) => norm(String(h))),
+    rows: tableRowsRaw.map((r: any, i: number) => {
+      const rowArr = Array.isArray(r) ? r : toArray(r);
+      return rowArr.map((cell: any) => norm(String(cell ?? "—")));
+    })
+  };
+
+  return {
+    title,
+    heroIntro,
+    keyTakeaways,
+    criteria,
+    pros,
+    cons,
+    faq,
+    conclusion,
+    seoTitle,
+    metaDescription: metaDesc,
+    table,
+    productDetails
+  };
+}
+
+
+
+/* ======================================================================== */
+/* =                       MARKDOWN RENDERER (KAUFBERATUNG)                = */
+/* ======================================================================== */
+
+	type InlineAnchor = { anchorText: string; url: string };
+
+	// baut einen "lockeren" Regex, der ae/ä, oe/ö, ue/ü, ß/ss und Leerzeichen/Hyphen abdeckt
+	function createLooseRegex(term: string): RegExp {
+	  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	  const raw = String(term || "").trim();
+	  if (!raw) return /$a/; // nie-matchendes Fallback
+
+	  // tokens: durch Leerzeichen/Hyphen getrennt
+	  const rawTokens = raw.split(/[\s\-]+/).filter(Boolean);
+
+	  // pro Token Zeichen für Zeichen in Regex-Alternativen umwandeln
+	  function tokenToPattern(tok: string): string {
+		let out = "";
+		for (let i = 0; i < tok.length; ) {
+		  const two = tok.slice(i, i + 2).toLowerCase();
+		  const ch  = tok[i];
+
+		  if (two === "ae") { out += "(?:ä|ae)"; i += 2; continue; }
+		  if (two === "oe") { out += "(?:ö|oe)"; i += 2; continue; }
+		  if (two === "ue") { out += "(?:ü|ue)"; i += 2; continue; }
+
+		  const lower = ch.toLowerCase();
+		  if (lower === "ä") { out += "(?:ä|ae)"; i += 1; continue; }
+		  if (lower === "ö") { out += "(?:ö|oe)"; i += 1; continue; }
+		  if (lower === "ü") { out += "(?:ü|ue)"; i += 1; continue; }
+		  if (ch === "ß")    { out += "(?:ß|ss)"; i += 1; continue; }
+
+		  out += esc(ch);
+		  i += 1;
+		}
+		return out;
+	  }
+
+	  const tokens = rawTokens.map(tokenToPattern);
+	  const body   = tokens.join("[\\s\\-]+"); // zwischen Tokens: Space/Hyphen tolerant
+
+	  const final = `(^|[^\\wÄÖÜäöüß])(${body})(?=[^\\wÄÖÜäöüß]|$)`;
+	  return new RegExp(final, "iu");
+	}
+
+
+
+	function pickInlineAnchors(
+	  ai: AiCopy,
+	  currentSlug: string,
+	  currentCategory: string,
+	  registry: ContentRegistry,
+	  maxLinks = 4
+	): { anchorText: string; url: string }[] {
+	  const corpusOrig = [
+		ai.heroIntro,
+		...(ai.criteria || []).map(c => `${c.heading}. ${c.body}`),
+		...(ai.productDetails || []).map(p => p.summary || ""),
+		...(ai.faq || []).map(x => `${x.q}. ${x.a}`),
+		ai.conclusion
+	  ].join(" \n ");
+
+	  const hasCareTopic = /\b(öl|oel|holzöl|pflege|imprägnierung|schutz|versiegelung)\b/i.test(corpusOrig);
+
+	  const candidates = (registry.items || [])
+		.filter(i => i.category === currentCategory && i.slug !== currentSlug);
+
+	  type Scored = { entry: RegistryEntry; rawTerm: string; score: number };
+	  const bucketByAnchor: Record<string, Scored[]> = {};
+
+	  // sammeln & scoren
+	  for (const e of candidates) {
+		const rawTerms = [e.mainKeyword, ...(e.synonyms || [])]
+		  .map(s => String(s || "").trim())
+		  .filter(Boolean);
+
+		for (const raw of rawTerms) {
+		  const re = createLooseRegex(raw);
+		  if (!re.test(corpusOrig)) continue;
+
+		  let sc = 1;
+			const kw = safeStr(e.mainKeyword);         // <-- einmal absichern
+			if (normDe(raw) === normDe(kw)) sc += 1;
+			if (e.isPillar) sc += 2;
+
+
+		  // Themen-Boost: �l/Pflege-Kontext
+
+			if (hasCareTopic && /\b(�l|oel|pflege|impr�gnierung|holz�l)\b/i.test(kw)) sc += 1;
+
+			const key = normDe(raw);
+			(bucketByAnchor[key] ||= []).push({ entry: e, rawTerm: raw, score: sc });
+
+		}
+	  }
+
+	  // „zufällige“ (stabile) Auswahl je Anchor-Text
+	  const pickFrom = (arr: Scored[], seedStr: string): Scored => {
+		// erst nach Score/updatedAt vorsortieren
+		arr.sort((a, b) =>
+		  b.score - a.score ||
+		  (b.entry.updatedAt || "").localeCompare(a.entry.updatedAt || "")
+		);
+		// dann stabil „zufällig“: Hash -> Index
+		let h = 2166136261;
+		const s = seedStr;
+		for (let i = 0; i < s.length; i++) {
+		  h ^= s.charCodeAt(i);
+		  h = (h * 16777619) >>> 0;
+		}
+		const idx = arr.length ? h % arr.length : 0;
+		return arr[idx];
+	  };
+
+	  const chosen: Scored[] = [];
+	  for (const key of Object.keys(bucketByAnchor)) {
+		const picked = pickFrom(bucketByAnchor[key], `${currentSlug}|${key}`);
+		chosen.push(picked);
+	  }
+
+	  // jetzt noch auf maxLinks begrenzen (nach Score/Recency)
+	  chosen.sort((a, b) =>
+		b.score - a.score ||
+		(b.entry.updatedAt || "").localeCompare(a.entry.updatedAt || "")
+	  );
+
+	  const out: { anchorText: string; url: string }[] = [];
+	  const seenUrls = new Set<string>();
+	  for (const s of chosen) {
+		if (out.length >= maxLinks) break;
+		if (seenUrls.has(s.entry.url)) continue;
+		out.push({ anchorText: s.rawTerm, url: s.entry.url });
+		seenUrls.add(s.entry.url);
+	  }
+	  return out;
+	}
+
+
+
+function renderKaufberatungMarkdown(
+  keyword: string,
+  prods: KBProduct[],
+  ai: AiCopy,
+  tableFromPA: { headers: string[]; rows: string[][] },
+  language: "de" | "en" | "fr" = "de",
+  inlineAnchors: { anchorText: string; url: string }[] = []
+) {
+  // Lokaler Helper: Paragraph-Linker, der jeden AnchorText & jede URL im ganzen Artikel max. 1x verlinkt
+  // [InlineLinks Helper START]
+  function createParagraphLinker(
+    anchors: { anchorText: string; url: string }[]
+  ) {
+    const usedUrls = new Set<string>(); // jede URL max. 1x im Artikel
+    const usedText = new Set<string>(); // jeder AnchorText (normalisiert) max. 1x im Artikel
+
+    // längere Phrasen zuerst (vermeidet Teil-Treffer)
+    const list = [...anchors]
+      .filter(a => a?.anchorText && a?.url)
+      .sort((a, b) => normDe(b.anchorText).length - normDe(a.anchorText).length);
+
+    return function linkifyOneParagraph(txt: string): string {
+      const s = String(txt ?? "");
+      if (!s || !list.length) return s;
+
+      // HTML-Tags als eigene Tokens lassen – innerhalb existierender <a>…</a> nicht ersetzen
+      const parts = s.split(/(<[^>]+>)/g);
+      let insideA = false;
+
+      for (let i = 0; i < parts.length; i++) {
+        const tok = parts[i];
+
+        if (tok.startsWith("<")) {
+          if (/^<a\b/i.test(tok)) insideA = true;
+          else if (/^<\/a>/i.test(tok)) insideA = false;
+          continue; // Tags unangetastet
+        }
+        if (insideA) continue;
+
+        let segment = tok;
+
+        for (const a of list) {
+          const kText = normDe(a.anchorText);
+          if (usedUrls.has(a.url) || usedText.has(kText)) continue;
+
+          const re = createLooseRegex(a.anchorText);
+          segment = segment.replace(re, (_m, pre, hit) => {
+            usedUrls.add(a.url);
+            usedText.add(kText);
+            return `${pre}<a href="${a.url}">${hit}</a>`;
+          });
+          // falls jetzt verlinkt, wird obige used-Logik das nächste Mal blockieren
+        }
+
+        parts[i] = segment;
+      }
+
+      return parts.join("");
+    };
+  }
+  // Erzeuge den Linker EINMAL für den gesamten Artikel:
+  const L = createParagraphLinker(inlineAnchors);
+  // [InlineLinks Helper END]
+
+  const [p1, p2, p3, p4] = prods;
+
+  // Spaltenübersetzungen
+  const COLUMN_LABELS: Record<"de" | "en" | "fr", Record<string, string>> = {
+    de: {
+      "Modell": "Modell",
+      energy: "Energieversorgung",
+      cutWidth: "Schnittbreite",
+      capacityL: "Volumen",
+      dimensions: "Maße",
+      weight: "Gewicht",
+      usp: "Besonderheit",
+      voltage: "Spannung",
+      powerWatts: "Leistung",
+      chainLength: "Schwertlänge",
+      flowRateLh: "Durchfluss",
+      pressureBar: "Druck",
+      lumen: "Lumen",
+      colorTempK: "Farbtemperatur",
+      runtimeMin: "Laufzeit",
+      rangeM: "Reichweite",
+      material: "Material",
+      seats: "Sitzplätze",
+      color: "Farbe"
+    },
+    en: {
+      "Modell": "Model",
+      energy: "Power supply",
+      cutWidth: "Cut width",
+      capacityL: "Capacity",
+      dimensions: "Dimensions",
+      weight: "Weight",
+      usp: "Key feature",
+      voltage: "Voltage",
+      powerWatts: "Power",
+      chainLength: "Bar length",
+      flowRateLh: "Flow rate",
+      pressureBar: "Pressure",
+      lumen: "Lumens",
+      colorTempK: "Color temp",
+      runtimeMin: "Runtime",
+      rangeM: "Range",
+      material: "Material",
+      seats: "Seats",
+      color: "Color"
+    },
+    fr: {
+      "Modell": "Modèle",
+      energy: "Alimentation",
+      cutWidth: "Largeur de coupe",
+      capacityL: "Capacité",
+      dimensions: "Dimensions",
+      weight: "Poids",
+      usp: "Particularité",
+      voltage: "Tension",
+      powerWatts: "Puissance",
+      chainLength: "Longueur du guide",
+      flowRateLh: "Débit",
+      pressureBar: "Pression",
+      lumen: "Lumens",
+      colorTempK: "Temp. de couleur",
+      runtimeMin: "Autonomie",
+      rangeM: "Portée",
+      material: "Matériau",
+      seats: "Places",
+      color: "Couleur"
+    }
+  };
+
+  const LINK_LABEL = language === "de" ? "Link" : language === "fr" ? "Lien" : "Link";
+  const IMAGE_LABEL = language === "de" ? "Bild" : "Image";
+  const localizeHeader = (h: string) => COLUMN_LABELS[language]?.[h] || h;
+
+  // ---- JSON-LD ----
+  const faqJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: (ai.faq || []).map((f: any) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a }
+    }))
+  }, null, 0);
+
+  const itemListJsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: prods.map((p, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: p.buyUrl,
+      name: p.title
+    }))
+  }, null, 0);
+
+  // ---- Kaufkriterien ohne führende Tabs/Spaces (verhindert Code-Block-Rendering & falsche Schrift) ----
+  const criteriaBlocks = (ai.criteria || [])
+    .map((c: any) => `### ${escapeHtml(c.heading)}\n${L(c.body)}`)
+    .join("\n\n");
+
+  // ---- TABELLE (HTML): 1) Modell, 2) Bild, 3..n) andere Spalten, letzte: Link ----
+  const headers = [
+    localizeHeader("Modell"),
+    IMAGE_LABEL,
+    ...(tableFromPA.headers || []).slice(1).map(localizeHeader),
+    LINK_LABEL
+  ];
+
+  const escCell = (v: string) => escapeHtml(String(v)).replace(/\|/g, "&#124;");
+
+  const headerHtml = `<tr>${headers.map(h => `<th>${escCell(h)}</th>`).join("")}</tr>`;
+
+  const bodyHtml = prods.map((prod, idx) => {
+    const base = tableFromPA.rows[idx] || [];
+
+    const modelCell = escCell(base[0] ?? prod.title ?? prod.asin);
+
+    const imgTd = prod.imgAmazon
+      ? `<td><img src="${prod.imgAmazon}" alt="${escCell(prod.title)} – Miniatur" width="72" height="72" loading="lazy" /></td>`
+      : `<td>—</td>`;
+
+    const otherTds = (base.slice(1) || []).map(c => `<td>${escCell(c)}</td>`).join("");
+
+    const ctaLabel = language === "fr" ? "Voir sur Amazon" : language === "en" ? "View on Amazon" : "Jetzt ansehen";
+	const ctaTd = `<td><a
+	  href="${prod.buyUrl}"
+	  class="buy-button"
+	  rel="nofollow sponsored noopener"
+	  target="_blank"
+	  data-pirsch-event="Affiliate Click"
+	  data-pirsch-meta-asin="${prod.asin}"
+	  data-pirsch-meta-name="${escapeHtml(prod.name || prod.title || prod.asin)}"
+	  data-pirsch-meta-pos="${String(idx + 1)}"
+	>${ctaLabel}</a></td>`;
+
+
+
+    return `<tr><td>${modelCell}</td>${imgTd}${otherTds}${ctaTd}</tr>`;
+  }).join("");
+
+  const tableHtml = `
+<h2>${language === "fr" ? "Comparatif détaillé des quatre produits" : language === "en" ? "Detailed comparison of the four products" : "Ausführlicher Vergleich der 4 beliebtesten Produkte"}</h2>
+<div class="table-wrap">
+  <table class="comparison-table">
+    <thead>${headerHtml}</thead>
+    <tbody>${bodyHtml}</tbody>
+  </table>
+</div>`.trim();
+
+  // ---- Produktdetails ----
+  const pd = ai.productDetails || [];
+  const prodDetailLeft = (i: number, p: KBProduct) => {
+    const d = pd[i] || { summary: "", bestFor: "", keyFeatures: [] as string[] };
+    const features = (d.keyFeatures || []).map(f => `<li>${escapeHtml(f)}</li>`).join("");
+    const bestFor = d.bestFor
+      ? `<p class="best-for"><strong>${language === "fr" ? "Idéal pour" : language === "en" ? "Best for" : "Geeignet für"}:</strong> ${escapeHtml(d.bestFor)}</p>`
+      : "";
+    return `
+<p>${L(d.summary)}</p>
+${bestFor}
+${features ? `<ul class="feature-list">${features}</ul>` : ""}
+<div style="height:16px"></div>
+<p style="margin-top:8px;">
+	<a
+	  href="${p.buyUrl}"
+	  class="buy-button"
+	  rel="nofollow sponsored noopener"
+	  target="_blank"
+	  data-pirsch-event="Affiliate Click"
+	  data-pirsch-meta-asin="${p.asin}"
+	  data-pirsch-meta-name="${escapeHtml(p.name || p.title || p.asin)}"
+	  data-pirsch-meta-pos="detail"
+	>
+	  ${language === "fr" ? "Voir sur Amazon" : language === "en" ? "View on Amazon" : "Bei Amazon ansehen"}
+	</a>
+</p>
+`.trim();
+  };
+
+  const prodTwoCol = (p: KBProduct, i: number) => `
+<div class="prod-two-col">
+  <div class="prod-left">
+    ${prodDetailLeft(i, p)}
+  </div>
+  <div class="prod-right">
+    <img class="product-image" src="${p.imgAmazon}" alt="${escapeHtml(p.title)} – Produktbild (Amazon)" ${p.imgAmazonWidth && p.imgAmazonHeight ? `width="${p.imgAmazonWidth}" height="${p.imgAmazonHeight}"` : `width="400" height="400"`} loading="lazy" />
+  </div>
+</div>
+`.trim();
+
+  const productsDetailSection = `
+## ${language === "fr" ? "Produits en détail" : language === "en" ? "Products in detail" : "Unsere Empfehlungen im Detail"}
+### ${escapeHtml(buildBrandModel(p1.paRaw, p1.title, p1.name, keyword))}
+${prodTwoCol(p1,0)}
+<hr class="soft-sep" />
+
+### ${escapeHtml(buildBrandModel(p2.paRaw, p2.title, p2.name, keyword))}
+${prodTwoCol(p2,1)}
+<hr class="soft-sep" />
+
+#### ${escapeHtml(buildBrandModel(p3.paRaw, p3.title, p3.name, keyword))}
+${prodTwoCol(p3,2)}
+<hr class="soft-sep" />
+
+### ${escapeHtml(buildBrandModel(p4.paRaw, p4.title, p4.name, keyword))}
+${prodTwoCol(p4,3)}
+`.trim();
+
+  // ---- Hero-Intro & Fazit (verlinkt mit L) ----
+  const heroIntro =
+    ai.heroIntro && ai.heroIntro.trim().length > 0
+      ? ai.heroIntro
+      : (language === "fr"
+          ? `Aperçu rapide de ${keyword} : critères clés et comparaison de quatre variantes courantes.`
+          : language === "en"
+            ? `Quick overview of ${keyword}: key criteria plus a comparison of four common options.`
+            : `Kurzüberblick zu ${keyword}: Die wichtigsten Kriterien zusammengefasst, plus Vergleich von vier gängigen Varianten.`);
+
+  const conclusionLinked = ai.conclusion
+    ? L(ai.conclusion)
+    : (language === "fr"
+        ? `En bref : choisissez ${keyword} selon vos besoins — mobile (batterie), endurant (secteur) ou très puissant (essence).`
+        : language === "en"
+          ? `Bottom line: choose ${keyword} based on needs — mobile (battery), enduring (corded), or maximum power (gas).`
+          : `Unterm Strich: ${keyword} nach Bedarf wählen – mobil (Akku), ausdauernd (Netz) oder maximal kraftvoll (Benzin).`);
+
+  // ---- Finale Rückgabe (MDX) ----
+  return `
+<div class="hero-split">
+  <div class="hero-left">
+    <img
+      src="${p1.imgAi}"
+      alt="${escapeHtml(p1.name || ai.title || keyword)} – Anwendung im Garten (AI)"
+      class="hero-img"
+      width="1024"
+      height="1024"
+      loading="eager"
+      fetchpriority="high"
+      decoding="async"
+      sizes="(max-width: 960px) 100vw, 60vw"
+    />
+  </div>
+  <div class="hero-right">
+    <h1 class="page-title">${escapeHtml(ai.title || `Kaufberatung: ${keyword}`)}</h1>
+    <p>${L(heroIntro)}</p>
+    ${
+      (ai.keyTakeaways && ai.keyTakeaways.length)
+        ? `<div class="key-takeaways"><ul>${ai.keyTakeaways.map(t => `<li>${escapeHtml(t)}</li>`).join("")}</ul></div>`
+        : ""
+    }
+  </div>
+</div>
+
+---
+
+${tableHtml}
+
+---
+
+## ${language === "fr" ? "Critères d'achat" : language === "en" ? "Buying criteria" : "Kaufkriterien"}
+${criteriaBlocks}
+
+---
+
+## ${language === "fr" ? "Avantages & Inconvénients (général)" : language === "en" ? "Pros & Cons (general)" : "Vor- & Nachteile (allgemein)"}
+
+<div class="proscons">
+  <div class="pros-card">
+    <h3>${language === "fr" ? "Avantages" : language === "en" ? "Pros" : "Vorteile"}</h3>
+    <ul>
+      ${(ai.pros || []).map((p: string) => `<li>${escapeHtml(p)}</li>`).join("")}
+    </ul>
+  </div>
+  <div class="cons-card">
+    <h3>${language === "fr" ? "Inconvénients" : language === "en" ? "Cons" : "Nachteile"}</h3>
+    <ul>
+      ${(ai.cons || []).map((c: string) => `<li>${escapeHtml(c)}</li>`).join("")}
+    </ul>
+  </div>
+</div>
+
+---
+
+${productsDetailSection}
+
+---
+
+## FAQ
+${(ai.faq || []).map((f: any) => `
+<details class="faq">
+  <summary>${escapeHtml(f.q)}</summary>
+  <div>${L(f.a)}</div>
+</details>
+`.trim()).join("\n")}
+
+---
+
+## ${language === "fr" ? "Conclusion & recommandation" : language === "en" ? "Conclusion & recommendation" : "Fazit & Empfehlung"}
+${conclusionLinked}
+
+<script type="application/ld+json">
+${faqJsonLd}
+</script>
+<script type="application/ld+json">
+${itemListJsonLd}
+</script>
+`.trim();
+}
+
+
+
+
+
+/* ======================================================================== */
+/* =                            IMAGE GENERATION                           = */
+/* ======================================================================== */
+
+async function generateAiImageFile(
+  client: OpenAI,
+  {
+    prompt,
+    model,
+    size,
+    outPath
+  }: { prompt: string; model: string; size: "1024x1024" | "1024x1536" | "1536x1024" | "auto"; outPath: string }
+): Promise<void> {
+  const resp = await withTimeout(
+    client.images.generate({ model, prompt, size }),
+    90000
+  );
+  const b64 = (resp as any)?.data?.[0]?.b64_json;
+  if (b64) {
+    fs.writeFileSync(outPath, Buffer.from(b64, "base64"));
+    return;
+  }
+  const url = (resp as any)?.data?.[0]?.url;
+  if (!url) throw new Error("no image in response");
+  const r = await fetch(url as string);
+  if (!r.ok) throw new Error(`download url failed: ${r.status}`);
+  const ab = await r.arrayBuffer();
+  fs.writeFileSync(outPath, Buffer.from(ab));
+}
+
+
+/* ======================================================================== */
+/* =                               POST HANDLER                            = */
+/* ======================================================================== */
+
+export async function POST(req: Request) {
+  const url = new URL(req.url);
+  try {
+    const projectRoot = findProjectRoot();
+    const siteId = String(process.env.SITE_ID || "garden-hero");
+    const siteCfg = readSiteConfig(projectRoot, siteId);
+
+
+	
+    if (url.searchParams.get("debug") === "1") {
+      return NextResponse.json({ ok: true, projectRoot, siteId, env: envSummary(siteCfg) });
+    }
+    if (url.searchParams.get("ping") === "1") {
+      const client = getOpenAI();
+      if (!client) return NextResponse.json({ ok: false, reason: "no_openai_key" }, { status: 400 });
+      try {
+        const r = await withTimeout(
+          client.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: "ping" }],
+            max_completion_tokens: 5
+          }),
+          15000
+        );
+        return NextResponse.json({ ok: true, model: (r as any).model });
+      } catch (err: any) {
+        return NextResponse.json({ ok: false, error: String(err?.message || err) }, { status: 500 });
+      }
+    }
+
+
+// ------------------------------------------------------------
+// 1) Body PARSEN + language/mainKeyword FRÜH setzen (mit Sanitizing)
+// ------------------------------------------------------------
+const body = await req.json().catch(() => ({}));
+const language = (String(body?.language ?? "de") as "de" | "en" | "fr");
+
+// Keyword defensiv säubern: Entities → Zeichen → Mojibake-Fix → Whitespaces
+const rawIn = body?.mainKeyword;
+const keyword = fixMojibake(
+  decodeHtmlEntities(typeof rawIn === "string" ? rawIn : String(rawIn ?? ""))
+).replace(/\s+/g, " ").trim();
+
+if (!keyword) {
+  throw new Error("Kategorieauswahl fehlgeschlagen: 'mainKeyword' fehlt oder ist leer.");
+}
+
+// Modelle (unverändert)
+const textModel  = String(body?.textModel  ?? process.env.OPENAI_TEXT_MODEL  ?? "gpt-4o-mini");
+const imageModel = String(body?.imageModel ?? process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1");
+const imageSizeBody = String(body?.imageSize ?? process.env.OPENAI_IMAGE_SIZE ?? "1024x1024");
+const ALLOWED_SIZES = new Set(["1024x1024","1024x1536","1536x1024","auto"]);
+const imageSize = (ALLOWED_SIZES.has(imageSizeBody) ? imageSizeBody : "1024x1024") as
+  "1024x1024" | "1024x1536" | "1536x1024" | "auto";
+const aiMode = (body?.aiMode ?? "fast") as "on" | "fast" | "off";
+const aiStrict = body?.aiStrict !== undefined ? Boolean(body.aiStrict) : false;
+const force = body?.force !== undefined ? Boolean(body.force) : true;
+const imagePolicy = (body?.imagePolicy ?? "reuse") as "reuse" | "refresh" | "off";
+
+
+
+    // ------------------------------------------------------------
+    // 2) Kategorien laden + Intro-Dateien sicherstellen + beste Kategorie per OpenAI wählen
+    //    (language ist bereits gesetzt -> kein "Cannot access ... before initialization")
+    // ------------------------------------------------------------
+    const categories = getSiteCategories(siteCfg);
+    await ensureCategoryIntroFiles(projectRoot, siteId, categories, language);
+
+    const pickedCategory = await chooseCategoryWithAI(keyword, categories, language);
+    const category = pickedCategory.slug;
+		// --- SLUG FRÜH BESTIMMEN (vor Bildgenerierung) ---------------------------
+	// Basis-Slug aus dem Keyword (Leerzeichen -> '-'; Kleinbuchstaben)
+	const baseSlug = slugify(keyword);
+
+	// Zielordner, in den später die MDX geschrieben wird
+	const outDirForSlug = path.join(projectRoot, "sites", siteId, "content", category);
+	ensureDir(outDirForSlug);
+
+	// Kollisionen vermeiden: wenn es schon eine Datei mit diesem Slug gibt,
+	// hänge -2, -3, ... an (so bleibt die URL kurz & stabil)
+	let slug = baseSlug;
+	let suffix = 1;
+	while (fs.existsSync(path.join(outDirForSlug, `${slug}.mdx`))) {
+	  suffix += 1;
+	  slug = `${baseSlug}-${suffix}`;
+	}
+		
+			
+	// --- Content Registry einlesen und eigenen Eintrag upserten ---
+	let registry = readRegistry(projectRoot, siteId);   // ✅ let statt const
+
+	{
+	  const selfUrl = `/${category}/${slug}`;
+	  const idx = registry.items.findIndex(i => i.slug === slug);
+	  const entry: RegistryEntry = {
+		slug,
+		url: selfUrl,
+		mainKeyword: keyword,
+		synonyms: [],
+		category,
+		isPillar: false,
+		updatedAt: new Date().toISOString(),
+	  };
+	  if (idx >= 0) registry.items[idx] = entry; else registry.items.push(entry);
+	  writeRegistry(projectRoot, siteId, registry);
+	}
+
+	await ensureRegistrySynonyms(projectRoot, siteId, language);
+
+	// nur neu zuweisen – NICHT erneut deklarieren
+	registry = readRegistry(projectRoot, siteId);       // ✅ Reassign, kein neues const
+
+
+	// ---------------------------------------------------------------
+
+	// -------------------------------------------------------------------------
+
+
+    // ------------------------------------------------------------
+    // 3) Produkte/ASINs vorbereiten
+    // ------------------------------------------------------------
+    const inputProducts = Array.isArray(body?.products) ? body.products : [];
+    let asins: string[] = Array.isArray(body?.asins) ? body.asins : [];
+    if (asins.length === 0 && inputProducts.length > 0) {
+      asins = inputProducts.map((p: any) => (p?.asin || "").trim()).filter(Boolean);
+    }
+
+    // ASIN-Check
+    const asinRegex = /^[A-Z0-9]{10}$/;
+    const validAsins = asins.map(a => a.toUpperCase()).filter(a => asinRegex.test(a)).slice(0, 4);
+    // NEU – genau 4 gültige ASINs erforderlich
+	if (validAsins.length !== 4) {
+	  return NextResponse.json(
+		{ ok: false, error: `erwarte genau 4 gültige ASINs, erhalten: ${validAsins.length}` },
+		{ status: 400 }
+	  );
+	}
+
+
+    // ------------------------------------------------------------
+    // 4) PA-API holen
+    // ------------------------------------------------------------
+    let paMap: Record<string, any> = {};
+    try {
+      paMap = await paapiGetItems(validAsins);
+      // optionales Debug
+      try {
+        const dbg = path.join(projectRoot, "sites", siteId, "content", "_ai-debug");
+        ensureDir(dbg);
+        fs.writeFileSync(path.join(dbg, `pa-${Date.now()}.json`), JSON.stringify(paMap, null, 2), "utf8");
+      } catch {}
+    } catch (e) {
+      console.error("PA-API error:", e);
+      return NextResponse.json({ ok: false, error: "Amazon PA-API fehlgeschlagen" }, { status: 500 });
+    }
+
+    const prods: KBProduct[] = validAsins.map((asin) => {
+      const pa = paMap[asin];
+      const titleRaw = firstNonEmpty(
+        gp(pa, ["ItemInfo","Title","DisplayValue"]),
+        gp(pa, ["title"]),
+        asin
+      );
+      const title = truncate(titleRaw, 100);
+      const neutralName =
+        (inputProducts.find((p: any) => (p?.asin||"").toUpperCase() === asin)?.name || "Rasentrimmer").trim();
+      const detail = gp(pa, ["DetailPageURL"]) || buildAffiliateUrl(asin);
+      const img =
+        gp(pa, ["Images","Primary","Large","URL"]) ||
+        gp(pa, ["Images","Primary","Medium","URL"]) ||
+        gp(pa, ["Images","Primary","Small","URL"]) || "";
+      const dims = gp(pa, ["Images","Primary","Large"]) || gp(pa, ["Images","Primary","Medium"]) || undefined;
+
+      return {
+        asin,
+        name: neutralName,
+        title,
+        buyUrl: detail,
+        imgAmazon: img,
+        imgAmazonWidth: dims?.Width,
+        imgAmazonHeight: dims?.Height,
+        imgAi: "",
+        paRaw: pa
+      };
+		});
+
+	if (prods.length !== 4) {
+	  return NextResponse.json(
+		{ ok: false, error: `interner Zustand: erwarte 4 Produkte, habe ${prods.length}` },
+		{ status: 400 }
+	  );
+	}
+
+
+
+
+    // ------------------------------------------------------------
+    // 5) AI-Bild (Hero) – stabiler Dateiname + Reuse-Policy
+    // ------------------------------------------------------------
+    const pHero = prods[0];
+    const aiDir = path.join(process.cwd(), "public", "ai");
+    ensureDir(aiDir);
+    const aiFileBase = `kb-${slug}`; // eindeutig pro Artikel
+	const aiOutPath = path.join(aiDir, `${aiFileBase}.png`);
+	const aiPublicUrl = `/ai/${aiFileBase}.png`;
+
+
+
+    if (imagePolicy === "off" || aiMode === "off") {
+      if (aiStrict) throw new Error("aiStrict aktiv, aber imagePolicy/aiMode ist 'off'.");
+      pHero.imgAi = `https://via.placeholder.com/1024x1024?text=${encodeURIComponent(pHero.name + " im Garten")}`;
+    } else if (imagePolicy === "reuse" && fs.existsSync(aiOutPath) && !force) {
+      try {
+        const st = fs.statSync(aiOutPath);
+        if (st.size > 4096) {
+          pHero.imgAi = aiPublicUrl;
+        } else {
+          fs.rmSync(aiOutPath, { force: true });
+        }
+      } catch {}
+    }
+
+    if (!pHero.imgAi) {
+      const subject = keyword; // bewusst: was der Nutzer generieren will
+      const prompt = `Fotorealistisches Produktfoto: ${subject} in klarer, sachlicher Darstellung während der Anwendung von einer erwachsenen Person mit weißer Hautfarbe. Quadratisches Bild, natürliche Beleuchtung, Garten als Hintergrund, scharf fokussiert, ohne zusätzliche Deko oder Hände. Produkt zentriert und vollständig sichtbar.`;
+
+      const client = getOpenAI();
+      if (!client) {
+        if (aiStrict) throw new Error("OPENAI_API_KEY fehlt/ungültig (AI-Bild).");
+        pHero.imgAi = `https://via.placeholder.com/1024x1024?text=${encodeURIComponent(subject)}`;
+      } else {
+        let lastErr: any = null;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            await generateAiImageFile(client, {
+              prompt,
+              model: imageModel,
+              size: imageSize,
+              outPath: aiOutPath
+            });
+            const stat = fs.statSync(aiOutPath);
+            if (!stat || stat.size < 4096) throw new Error(`image too small (${stat?.size} bytes)`);
+            pHero.imgAi = aiPublicUrl;
+            break;
+          } catch (e) {
+            lastErr = e;
+            await sleep(1000);
+          }
+        }
+        if (!pHero.imgAi) {
+          const msg = `AI image generation failed: ${String(lastErr?.message || lastErr)}`;
+          if (aiStrict) throw new Error(msg);
+          pHero.imgAi = `https://via.placeholder.com/1024x1024?text=${encodeURIComponent(subject)}`;
+        }
+      }
+    }
+
+    // ------------------------------------------------------------
+    // 6) AI-Texte erzeugen
+    // ------------------------------------------------------------
+    const aiCopy = await generateAiCopyFromKeyword(language, keyword, prods, { textModel, force });
+
+		// ------------------------------------------------------------
+	// 6a) Titelvorschläge generieren & besten wählen
+	//     -> H1 + SEO-Title angleichen
+	// ------------------------------------------------------------
+// ------------------------------------------------------------
+// 6a) Titelvorschläge generieren, säubern & besten wählen
+//     -> H1 + SEO-Title vereinheitlichen
+// ------------------------------------------------------------
+	const norm = (x: string) => {
+	  let v = String(x ?? "");
+	  v = decodeHtmlEntities(v);
+	  v = fixMojibake(v);
+	  return v.replace(/\s+/g, " ").trim();
+	};
+
+	let titleCandidates: string[] = [];
+	try {
+	  const aiCands = await generateTitleCandidates(language, keyword, prods, { textModel, min: 4, max: 8 });
+
+	  // Basis-Kandidaten mit Buying-Intent (keine "Text"/Tipps-only-Titel)
+	  const baseCands = [
+		aiCopy?.seoTitle || "",
+		aiCopy?.title || "",
+		`Kaufberatung: ${keyword}`,
+		`${keyword} – Vergleich & Kaufberatung`,
+		`${keyword} Ratgeber: Modelle, Auswahl & Empfehlungen`,
+		`Die besten ${keyword} im Vergleich – Kaufberatung`,
+	  ];
+
+	  titleCandidates = [...aiCands, ...baseCands]
+		.map(norm)              // << Entities & Mojibake FIX
+		.filter(Boolean);       // leere Einträge entfernen
+	} catch {
+	  // notfalls nur Fallbacks
+	  titleCandidates = [
+		`Kaufberatung: ${keyword}`,
+		`${keyword} – Vergleich & Kaufberatung`,
+	  ].map(norm);
+	}
+
+	const pickedTitleRaw = pickBestTitle(titleCandidates, keyword);
+	const pickedTitle    = norm(pickedTitleRaw);  // << auch das Ergebnis normalisieren
+
+	aiCopy.title    = pickedTitle;  // H1
+	aiCopy.seoTitle = pickedTitle;  // Frontmatter/SEO
+
+    // ------------------------------------------------------------
+    // 7) Vergleichstabelle aus PA/Heuristik
+    // ------------------------------------------------------------
+    const tableAuto = chooseTableColumnsAndRows(keyword, prods);
+    const tableHeaders = tableAuto.headers;
+    const tableRows    = tableAuto.rows;
+	// Sync: AI-JSON-Tabelle == tatsächlich gerenderte Tabelle
+	// Sync: AI-JSON-Tabelle == tatsächlich gerenderte Tabelle
+	aiCopy.table = { headers: tableHeaders.slice(0, 5), rows: tableRows.slice(0, 4) };
+
+
+	// AI-JSON-Tabelle mit der tatsächlich gerenderten Tabelle synchron halten
+	//try {
+	 // aiCopy.table = { headers: tableHeaders, rows: tableRows.slice(0, 4) };
+	//} catch {}
+
+
+	const inlineAnchors = pickInlineAnchors(aiCopy, slug, category, registry, 4);
+	console.log("INLINE-ANCHORS:", inlineAnchors);
+
+
+
+
+    // ------------------------------------------------------------
+    // 8) Markdown rendern
+    // ------------------------------------------------------------
+	
+
+	// 8) Markdown rendern
+	let mdBody = renderKaufberatungMarkdown(
+	  keyword,
+	  prods,
+	  aiCopy,
+	  { headers: tableHeaders, rows: tableRows },
+	  language,
+	  inlineAnchors
+	);
+
+
+
+	// 8b) Interne Inline-Links zuerst (1–2 Stück), dann externe
+
+	// --- interne Kandidaten laden (eigene Site) ---
+	const siteUrl = process.env.SITE_URL || undefined; // z.B. https://www.garden-heros.net
+	const internalCands = buildInternalLinkCandidates(projectRoot, siteId, siteUrl, category, slug);
+
+	// optional: einfache Relevanz-Sortierung – Kandidaten, deren KW dem main keyword ähnelt, zuerst
+	const normMain = normDe(keyword);
+	internalCands.sort((a, b) => {
+	  const aHit = a.keywords.some(k => normDe(k) === normMain);
+	  const bHit = b.keywords.some(k => normDe(k) === normMain);
+	  if (aHit && !bHit) return -1;
+	  if (bHit && !aHit) return 1;
+	  return (a.title || "").localeCompare(b.title || "");
+	});
+
+	// — max. 2 interne Links setzen —
+	const MAX_INTERNAL_INLINE = 2;
+	let internalInserted = 0;
+	const flags: "g" | "gi" = "gi";
+	const usedInternalPhrases = new Set<string>();
+
+	for (const cand of internalCands) {
+	  if (internalInserted >= MAX_INTERNAL_INLINE) break;
+
+	  // Phrasenliste vorbereiten (Hauptkeyword zuerst)
+	  const phrases = [cand.keywords[0], ...cand.keywords.slice(1)].filter(Boolean);
+
+	  const { mdNew, inserted, matchedPhrase } = insertInlineInternalLinkOnce(mdBody, cand.url, phrases, flags);
+	  if (inserted) {
+		mdBody = mdNew;
+		internalInserted++;
+		if (matchedPhrase) usedInternalPhrases.add(normDe(matchedPhrase));
+	  }
+	}
+
+	// 8c) Externe/Netzwerk-Links (zentral) – weiterhin nachrangig
+	const internalKw = loadInternalKeywords(projectRoot, siteId);
+	const { rules: netRules, links: centralLinksRaw } = loadCentralNetwork(projectRoot, siteId);
+
+	// optional säubern: nur vollständige Links
+	const centralLinks = centralLinksRaw.filter(l => l && l.url && l.title);
+
+	const maxNet = Math.max(0, Number(netRules.maxNetworkLinksPerArticle ?? 3));
+	let pickedNet: NetworkLink[] = [];
+	if (maxNet > 0 && centralLinks.length > 0) {
+	  // reservedInternal: interne Keywords global (Priorität intern > extern)
+	  pickedNet = pickNetworkLinks(centralLinks, {
+		mainKeyword: keyword,
+		category,
+		language,
+		reservedInternal: internalKw,
+		max: maxNet,
+		matchOpts: {
+		  caseInsensitive: netRules.match?.caseInsensitive !== false,
+		  stripDiacritics: !!netRules.match?.stripDiacritics
+		}
+	  });
+	}
+
+	// --- NUR externen Inline-Link versuchen (kein Block mehr) ---
+	let usedIds: string[] = [];
+	if (pickedNet.length > 0) {
+	  const inlineCandidate = pickedNet[0];
+	  if (inlineCandidate && inlineCandidate.url) {
+		// Phrasen aus dem Kandidaten (Keywords + mainKeyword)
+		const netPhrases = [
+		  ...(Array.isArray(inlineCandidate.keywords) ? inlineCandidate.keywords.map(k => k.kw).filter(Boolean) : []),
+		  keyword
+		].filter(Boolean);
+
+		// Insert-Logik wie gehabt (deine vorhandene Funktion): nutzt gefundenen Originaltext als Linktext
+		const { mdNew, inserted } = insertInlineNetworkLinkOnce(
+		  mdBody,
+		  inlineCandidate,
+		  keyword,
+		  {
+			caseInsensitive: netRules.match?.caseInsensitive !== false,
+			stripDiacritics: !!netRules.match?.stripDiacritics,
+		  }
+		);
+
+		if (inserted) {
+		  mdBody = mdNew;
+		  if (inlineCandidate.id) usedIds.push(inlineCandidate.id);
+		}
+	  }
+	}
+
+
+
+
+
+	// … Datei schreiben …
+
+	// 9b) Nutzung zentral hochzählen (Inline + Block)
+	if (usedIds.length > 0) {
+	  bumpCentralNetworkUsage(projectRoot, usedIds);
+	}
+
+
+
+
+
+	// ------------------------------------------------------------
+	// 9) Datei schreiben (in gewählte Kategorie) — TAB-frei & Umlaute-sicher
+	// ------------------------------------------------------------
+	const outDir = path.join(projectRoot, "sites", siteId, "content", category);
+	ensureDir(outDir);
+
+	const outFile = path.join(outDir, `${slug}.mdx`);
+
+	// sauberer String-Cleaner (nutzt deine bereits definierten Helpers)
+	const cleanStr = (txt: any) =>
+	  fixMojibake(decodeHtmlEntities(String(txt ?? ""))).replace(/\s+/g, " ").trim();
+
+	// finaler H1/SEO-Titel (bereinigt)
+	const h1Title = cleanStr(aiCopy.seoTitle || aiCopy.title || `Kaufberatung ${keyword}`);
+
+	// Front-Matter als Objekt -> YAML ohne Tabs/Indentation
+	const fmObj = {
+	  title: h1Title,
+	  description: cleanStr(aiCopy.metaDescription || `Kaufberatung zu ${keyword}`),
+	  category: String(category),
+	  slug: String(slug),
+	  authorId: "aut_anna",
+	  createdAt: new Date().toISOString(),
+	  heroImage: String(pHero.imgAi || ""),
+	  heroImageAlt: cleanStr(pHero.name || aiCopy.title || keyword),
+	};
+
+	// YAML sicher (keine Tabs, Werte JSON-quoted)
+	const fm =
+	  `---\n` +
+	  Object.entries(fmObj).map(([k, v]) => `${k}: ${JSON.stringify(v ?? "")}`).join("\n") +
+	  `\n---\n`;
+
+	// Falls dein mdBody schon ein <h1> hat: durch den bereinigten Titel ersetzen
+	const mdBodyFixed = mdBody.replace(
+	  /<h1[^>]*class="page-title"[^>]*>[\s\S]*?<\/h1>/i,
+	  `<h1 class="page-title">${escapeHtml(h1Title)}</h1>`
+	);
+
+	// final schreiben
+	fs.writeFileSync(outFile, fm + "\n" + mdBodyFixed + "\n", "utf8");
+
+	// 9) Zentralen Netzwerk-Pool updaten: diesen neuen Artikel bereitstellen
+	try {
+	  const siteUrl = process.env.SITE_URL;              // z. B. "https://deine-domain.de"
+	  const articlePath = `/${slug}`;                    // << ggf. an deine Route anpassen (z. B. `/artikel/${slug}`)
+	  const absoluteUrl = buildArticleUrl(siteUrl, articlePath);
+
+	  const domain = (() => { try { return new URL(absoluteUrl).hostname; } catch { return undefined; } })();
+
+	  const entry: NetworkLink = {
+		id: `${siteId}:${slug}`,
+		type: "network",
+		siteId,
+		domain,
+		title: h1Title,                                   // wir nutzen den bereits bereinigten Frontmatter-Titel
+		url: absoluteUrl,
+		keywords: [{ kw: keyword, match: "phrase" }],     // Haupt-Keyword als Ankerbasis
+		language,                                         // deine vorhandene Variable (z. B. "de")
+		categories: [String(category)],
+		group: makeGroupFromKeyword(keyword),             // z. B. "kw:bio-duenger-fuer-gemuesepflanzen"
+		used: 0,
+		usedBy: []
+	  };
+
+	  upsertCentralNetwork(projectRoot, entry);
+	  // console.log("[central-network] upserted:", entry.id);
+	} catch (e) {
+	  console.warn("[central-network] upsert failed:", e);
+	}
+
+
+
+    // Roh-AI mitschreiben
+    try {
+	// Finaler Sync vor dem Persistieren
+		//aiCopy.table = { headers: tableHeaders.slice(0, 5), rows: tableRows.slice(0, 4) };
+		// Finaler Sync vor dem Persistieren (Fallback, falls oben nicht griff)
+	  if (!aiCopy.table || (aiCopy.table.headers?.length !== 5 || aiCopy.table.rows?.length !== 4)) {
+	    aiCopy.table = { headers: tableHeaders.slice(0, 5), rows: tableRows.slice(0, 4) };
+	  }
+
+      const aiOutJson = path.join(outDir, `${slug}.ai.json`);
+      fs.writeFileSync(aiOutJson, JSON.stringify(aiCopy, null, 2), "utf8");
+    } catch {}
+
+    const aiDebug = {
+      title: aiCopy?.title ? 1 : 0,
+      takeaways: (aiCopy?.keyTakeaways || []).length,
+      criteria: (aiCopy?.criteria || []).length,
+      pros: (aiCopy?.pros || []).length,
+      cons: (aiCopy?.cons || []).length,
+      faq: (aiCopy?.faq || []).length,
+      tableHeaders: (aiCopy?.table?.headers || []).length,
+      tableRows: (aiCopy?.table?.rows || []).length,
+      productDetails: (aiCopy?.productDetails || []).length,
+      tableBuiltFromPA: true,
+      paItems: prods.map(p => ({ asin: p.asin, hasPA: !!p.paRaw })),
+      heroHasAi: !!prods[0].imgAi
+    };
+
+    return NextResponse.json({
+      ok: true,
+      path: `/${category}/${slug}`,
+      writtenTo: outFile,
+      siteId,
+      language,
+      textModel,
+      imageModel,
+      imageSize,
+      imagesSavedUnder: "/ai/",
+      aiDebug,
+      aiSource: "openai",
+      promptNonceUsed: Boolean(force)
+    });
+  } catch (e: any) {
+    console.error("Generate API Error:", e);
+    return NextResponse.json(
+      { ok: false, error: String(e?.message ?? e), stack: e?.stack ?? null, cwd: process.cwd() },
+      { status: 500 }
+    );
+  }
+}
+
+
+
+
+
+import fs from "node:fs/promises";
+import path from "node:path";
+import { contentRoot } from "@/lib/paths";
+
+export const runtime = "nodejs";
+
+export async function GET() {
+  try {
+    const dir = contentRoot("garden-hero");
+    let exists = false, list: string[] = [];
+    try {
+      const stat = await fs.stat(dir);
+      exists = stat.isDirectory();
+      if (exists) {
+        // Nur erste Ebene/Kategorieordner zeigen
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        list = entries.map(e => (e.isDirectory() ? `[DIR] ` : ``) + e.name);
+      }
+    } catch {}
+
+    return new Response(
+      JSON.stringify({ cwd: process.cwd(), dir, exists, list }, null, 2),
+      { status: 200, headers: { "content-type": "application/json" } }
+    );
+  } catch (e: any) {
+    return new Response(String(e?.stack || e), { status: 500 });
+  }
+}
+

@@ -1,0 +1,22 @@
+{
+  "name": "@jinge/integrations",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./amazon.pa": "./dist/amazon.pa.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "paapi5-nodejs-sdk": "^1.1.0",
+    "aws4": "^1.13.2"
+  }
+}

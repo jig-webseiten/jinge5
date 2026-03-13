@@ -1,0 +1,213 @@
+{
+  "meta": {
+    "version": "1.0"
+  },
+  "rules": {
+    "maxNetworkLinksPerArticle": 3,
+    "dedupeNetworkPerKeyword": true,
+    "match": {
+      "caseInsensitive": true,
+      "stripDiacritics": true
+    }
+  },
+  "links": [
+    {
+      "id": "garden-heros:dreirad-aus-birkenholz",
+      "type": "network",
+      "siteId": "garden-heros",
+      "domain": "www.garden-heros.net",
+      "title": "Dreirad aus Birkenholz im Vergleich: Top Modelle 2023",
+      "url": "https://www.garden-heros.net/dreirad-aus-birkenholz",
+      "keywords": [
+        {
+          "kw": "Ahorn",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "moebel"
+      ],
+      "group": "kw:dreirad-aus-birkenholz",
+      "used": 10,
+      "usedBy": [],
+      "updatedAt": "2025-09-19T13:03:27.953Z"
+    },
+    {
+      "id": "garden-heros:kindertisch-aus-birkenholz",
+      "type": "network",
+      "siteId": "garden-heros",
+      "domain": "www.garden-heros.net",
+      "title": "Kindertisch aus Birkenholz: Ratgeber für den Kauf",
+      "url": "https://www.garden-heros.net/kindertisch-aus-birkenholz",
+      "keywords": [
+        {
+          "kw": "Ahornholz",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "moebel"
+      ],
+      "group": "kw:kindertisch-aus-birkenholz",
+      "used": 8,
+      "usedBy": [],
+      "updatedAt": "2025-09-19T13:04:46.360Z"
+    },
+    {
+      "id": "garden-heros:gartenliege-aus-birkenholz",
+      "type": "network",
+      "siteId": "garden-heros",
+      "domain": "www.garden-heros.net",
+      "title": "Gartenliege aus Birkenholz: Kaufberatung für Ihr Zuhause",
+      "url": "https://www.garden-heros.net/gartenliege-aus-birkenholz",
+      "keywords": [
+        {
+          "kw": "Wahl",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "moebel"
+      ],
+      "group": "kw:gartenliege-aus-birkenholz",
+      "used": 3,
+      "usedBy": [],
+      "updatedAt": "2025-09-19T13:06:01.335Z"
+    },
+    {
+      "id": "garden-hero:oele-fuer-birkenholz",
+      "type": "network",
+      "siteId": "garden-hero",
+      "domain": "www.garden-hero.net",
+      "title": "Die besten Öle für Birkenholz: Kaufberatung 2023",
+      "url": "https://www.garden-hero.net/oele-fuer-birkenholz",
+      "keywords": [
+        {
+          "kw": "Ahorn",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "moebel"
+      ],
+      "group": "kw:ole-fur-birkenholz",
+      "used": 0,
+      "usedBy": [],
+      "updatedAt": "2025-09-19T13:07:43.431Z"
+    },
+    {
+      "id": "garden-hero:dreirad-aus-ahornholz",
+      "type": "network",
+      "siteId": "garden-hero",
+      "domain": "www.garden-hero.net",
+      "title": "Dreirad aus Ahornholz Kaufberatung: Top Modelle im Vergleich",
+      "url": "https://www.garden-hero.net/dreirad-aus-ahornholz",
+      "keywords": [
+        {
+          "kw": "Dreirad aus Ahornholz",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "moebel"
+      ],
+      "group": "kw:dreirad-aus-ahornholz",
+      "used": 0,
+      "usedBy": [],
+      "updatedAt": "2025-09-19T14:36:19.408Z"
+    },
+    {
+      "id": "garden-hero:gartenliege-aus-ahornholz",
+      "type": "network",
+      "siteId": "garden-hero",
+      "domain": "www.garden-hero.net",
+      "title": "Gartenliege aus Ahornholz im Vergleich: Top Modelle 2023",
+      "url": "https://www.garden-hero.net/gartenliege-aus-ahornholz",
+      "keywords": [
+        {
+          "kw": "Gartenliege aus Ahornholz",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "moebel"
+      ],
+      "group": "kw:gartenliege-aus-ahornholz",
+      "used": 0,
+      "usedBy": [],
+      "updatedAt": "2025-09-19T14:39:27.443Z"
+    },
+    {
+      "id": "garden-hero:oele-fuer-ahornholz",
+      "type": "network",
+      "siteId": "garden-hero",
+      "domain": "www.garden-hero.net",
+      "title": "Kaufberatung: Die besten Öle für Ahornholz im Vergleich",
+      "url": "https://www.garden-hero.net/oele-fuer-ahornholz",
+      "keywords": [
+        {
+          "kw": "Öle für Ahornholz",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "moebel"
+      ],
+      "group": "kw:ole-fur-ahornholz",
+      "used": 0,
+      "usedBy": [],
+      "updatedAt": "2025-09-19T17:39:48.174Z"
+    },
+    {
+      "id": "garden-hero:ahorn",
+      "type": "network",
+      "siteId": "garden-hero",
+      "domain": "www.garden-hero.net",
+      "title": "Ahorn Kaufberatung: Die besten Produkte im Vergleich",
+      "url": "https://www.garden-hero.net/ahorn",
+      "keywords": [
+        {
+          "kw": "Ahorn",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "pflanzgefaesse"
+      ],
+      "group": "kw:ahorn",
+      "used": 0,
+      "usedBy": [],
+      "updatedAt": "2025-09-20T07:31:24.910Z"
+    },
+    {
+      "id": "garden-hero:eiche-2",
+      "type": "network",
+      "siteId": "garden-hero",
+      "domain": "www.garden-hero.net",
+      "title": "Eiche Ratgeber: Die besten Hochbeete für Ihren Garten",
+      "url": "https://www.garden-hero.net/eiche-2",
+      "keywords": [
+        {
+          "kw": "Eiche",
+          "match": "phrase"
+        }
+      ],
+      "language": "de",
+      "categories": [
+        "moebel"
+      ],
+      "group": "kw:eiche",
+      "used": 0,
+      "usedBy": [],
+      "updatedAt": "2025-09-20T07:34:41.260Z"
+    }
+  ]
+}

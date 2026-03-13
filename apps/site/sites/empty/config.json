@@ -1,0 +1,105 @@
+{
+  "siteId": "garden-hero",
+  "logoUrl": "/logo-garden-hero.png",
+  "domain": "garden-hero.local",
+  "defaultLanguage": "de",
+
+  "style": {
+    "tone": "ruhig, erklärend und unterstützend; naturverbunden statt technisch",
+    "perspective": "direkte Ansprache in der Du-Form",
+    "target_audience": "Hobbygärtnerinnen und Hobbygärtner, die ihren Garten langfristig pflegen und verstehen wollen – vom Einsteiger bis zur erfahrenen Gartenliebhaberin",
+    "seo_focus": "natürliches Keyword-Targeting mit Varianten; Fokus auf Themenverständnis statt Kaufdruck",
+    "keywords_strategy": "Keywords behutsam einbinden; semantische Nähe und verständliche Umschreibungen bevorzugen; keine Wiederholungen um jeden Preis",
+    "style_examples": {
+      "good": "Ein gesunder Rasen entsteht nicht über Nacht. Wenn du regelmäßig mähst, richtig wässerst und dem Boden Zeit gibst, entwickelt sich die Fläche Schritt für Schritt dichter und widerstandsfähiger.",
+      "bad": "Rasenmäher kaufen – bester Rasenmäher Test 2025 – Top-Angebot sichern"
+    },
+    "forbidden_words": [
+      "kaufen Sie jetzt",
+      "jetzt sichern",
+      "billig",
+      "Schnäppchen",
+      "günstig kaufen",
+      "Top-Angebot",
+      "Bestseller",
+      "Deal",
+      "Rabatt",
+      "Testsieger",
+      "Test",
+      "Vergleichssieger",
+      "Garantieversprechen",
+      "100%",
+      "2020",
+      "2021",
+      "2022",
+      "2023",
+      "2024",
+      "2025",
+      "2026"
+    ],
+    "ai_instructions": "Schreibe wie eine erfahrene, ruhige Gartenbegleitung. Erkläre Zusammenhänge, Ursachen und typische Fehler verständlich und ohne Eile. Gib Empfehlungen vorsichtig und begründet, gerne mit Alternativen und Hinweisen auf langfristige Auswirkungen. Verwende weiche Übergänge, anschauliche Beispiele aus dem Gartenalltag und eine positive, ermutigende Sprache. Kein Kaufdruck, keine Rankings, keine reißerischen Begriffe oder Jahreszahlen."
+  },
+
+  "affiliate": {
+    "amazon": {
+      "partnerTag": "garden-hero-21",
+      "locale": "DE",
+      "apiMarketplace": "DE",
+      "domain": "amazon.de"
+    }
+  },
+
+  "branding": {
+    "primary": "#4E7C3A",
+    "secondary": "#F4F8F3",
+    "contrastMin": 4.5
+  },
+
+  "prompts": {
+    "brandName": "Garden Hero",
+    "topicDomain": "Garten & Rasenpflege",
+    "brandDescription": "Garden Hero begleitet dich durch alle Jahreszeiten im Garten. Wir erklären, wie Pflanzen, Boden und Pflege zusammenspielen, und geben ehrliche, verständliche Empfehlungen für nachhaltige Entscheidungen.",
+    "voice": "freundlich, ruhig und praxisnah; erklärend statt bewertend, unterstützend statt verkaufend.",
+    "positioning": "Orientierung statt Entscheidung: Wir helfen beim Verstehen, zeigen sinnvolle Optionen auf und erklären Vor- und Nachteile – damit Leser:innen selbstbewusst und langfristig richtig handeln."
+  },
+
+  "authors": [
+    {
+      "id": "aut_anna",
+      "name": "Anna Weber",
+      "bio": "Anna Weber hat ein Herz für Erde, Regen und das kleine Glück zwischen den Beeten. Auf Garden Hero ist sie die digitale Stimme echter Gartenfreude – eine Mischung aus Erfahrung, Neugier und der stillen Begeisterung vieler Menschen, die das Gärtnern lieben.",
+      "avatarUrl": "/authors/anna.png"
+    },
+    {
+      "id": "aut_judith",
+      "name": "Judith Sommer",
+      "bio": "Judith Sommer ist die digitale Stimme der Kräuterkunde auf Garden Hero. Inspiriert von echten Kräuterliebhaberinnen, vereint sie Wissen, Tradition und moderne Ideen zu einer sanften, naturverbundenen Perspektive. Ihre Texte duften nach Minze, Thymian und einer Prise KI-Magie.",
+      "avatarUrl": "/authors/judith.png"
+    },
+    {
+      "id": "aut_tobias",
+      "name": "Tobias Grünewald",
+      "bio": "Tobias Grünewald steht für praktisches Denken und smarte Lösungen – die digitale Stimme all jener, die mit Erde und Leidenschaft gärtnern. Auf Garden Hero teilt er Inspiration und Erfahrung aus unzähligen echten Gartenprojekten, gebündelt in einem KI-gestützten Blick auf das Wesentliche.",
+      "avatarUrl": "/authors/tobias.png"
+    },
+    {
+      "id": "aut_lea",
+      "name": "Lea Hartmann",
+      "bio": "Lea Hartmann ist die digitale Stimme für Ästhetik und Gestaltung im Garten. Ihre Texte auf Garden Hero verbinden florale Kreativität mit der Klarheit moderner KI-Technologie – für Menschen, die das Schöne im Grünen genauso lieben wie das Echte.",
+      "avatarUrl": "/authors/lea.png"
+    }
+  ],
+
+  "categories": [
+    { "id": "rasen", "slug": "rasen", "title": "Rasen" },
+    { "id": "wasser", "slug": "wasser", "title": "Wasser" },
+    { "id": "werkzeuge", "slug": "werkzeuge", "title": "Werkzeuge" },
+    { "id": "moebel", "slug": "moebel", "title": "Möbel" },
+    { "id": "pflanzgefaesse", "slug": "pflanzgefaesse", "title": "Pflanzgefäße" }
+  ],
+
+  "pirsch": {
+    "codeEnv": "NEXT_PUBLIC_PIRSCH_CODE",
+    "exclude": "\\/api\\/.*,\\/preview\\/.*"
+  }
+}
