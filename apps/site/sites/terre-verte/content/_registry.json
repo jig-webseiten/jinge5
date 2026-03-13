@@ -1,0 +1,885 @@
+{
+  "items": [
+    {
+      "slug": "graines-de-tournesol",
+      "url": "/pots-de-plantes/graines-de-tournesol",
+      "mainKeyword": "Graines de tournesol",
+      "synonyms": [
+        "tournesol Graines de"
+      ],
+      "category": "pots-de-plantes",
+      "isPillar": false,
+      "updatedAt": "2026-02-07T16:33:26.706Z"
+    },
+    {
+      "slug": "abri-pour-h-risson",
+      "url": "/gazon/abri-pour-h-risson",
+      "mainKeyword": "Abri pour hérisson",
+      "synonyms": [
+        "hérisson Abri pour"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-07T16:51:36.544Z"
+    },
+    {
+      "slug": "robot-tondeuse-sans-cable-peripherique",
+      "url": "/gazon/robot-tondeuse-sans-cable-peripherique",
+      "mainKeyword": "Robot tondeuse sans câble périphérique",
+      "synonyms": [
+        "Robot tondeuse sans cble périphérique",
+        "périphérique Robot tondeuse sans cble"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-09T18:03:56.039Z"
+    },
+    {
+      "slug": "abri-pour-herisson-avec-trappe-anti-rats",
+      "url": "/gazon/abri-pour-herisson-avec-trappe-anti-rats",
+      "mainKeyword": "Abri pour hérisson avec trappe anti-rats",
+      "synonyms": [],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-09T18:02:17.742Z"
+    },
+    {
+      "slug": "abri-pour-herisson-securise-contre-les-chats",
+      "url": "/gazon/abri-pour-herisson-securise-contre-les-chats",
+      "mainKeyword": "Abri pour hérisson sécurisé contre les chats",
+      "synonyms": [
+        "chats Abri pour hérisson sécurisé contre les"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-09T18:03:09.237Z"
+    },
+    {
+      "slug": "pompe-pour-perceuse",
+      "url": "/outils/pompe-pour-perceuse",
+      "mainKeyword": "Pompe pour perceuse",
+      "synonyms": [
+        "perceuse Pompe pour"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T07:28:52.924Z"
+    },
+    {
+      "slug": "canape-gonflable",
+      "url": "/meubles/canape-gonflable",
+      "mainKeyword": "Canapé gonflable",
+      "synonyms": [
+        "gonflable Canapé"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T08:14:27.576Z"
+    },
+    {
+      "slug": "canape-de-piscine-gonflable",
+      "url": "/meubles/canape-de-piscine-gonflable",
+      "mainKeyword": "Canapé de piscine gonflable",
+      "synonyms": [
+        "gonflable Canapé de piscine"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T08:27:29.523Z"
+    },
+    {
+      "slug": "fauteuil-lounge",
+      "url": "/meubles/fauteuil-lounge",
+      "mainKeyword": "Fauteuil lounge",
+      "synonyms": [
+        "lounge Fauteuil"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T08:40:31.663Z"
+    },
+    {
+      "slug": "fauteuil-gonflable",
+      "url": "/meubles/fauteuil-gonflable",
+      "mainKeyword": "Fauteuil gonflable",
+      "synonyms": [
+        "gonflable Fauteuil"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T08:53:55.295Z"
+    },
+    {
+      "slug": "piege-a-mouches-des-fruits",
+      "url": "/pots-de-plantes/piege-a-mouches-des-fruits",
+      "mainKeyword": "Piège à mouches des fruits",
+      "synonyms": [
+        "fruits Piège à mouches des"
+      ],
+      "category": "pots-de-plantes",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T09:08:39.103Z"
+    },
+    {
+      "slug": "piege-a-mouches-des-fruits-avec-eau-sucree",
+      "url": "/pots-de-plantes/piege-a-mouches-des-fruits-avec-eau-sucree",
+      "mainKeyword": "Piège à mouches des fruits avec eau sucrée",
+      "synonyms": [
+        "sucrée Piège à mouches des fruits avec eau"
+      ],
+      "category": "pots-de-plantes",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T09:23:13.283Z"
+    },
+    {
+      "slug": "piege-a-mouches-des-fruits-sans-vinaigre",
+      "url": "/outils/piege-a-mouches-des-fruits-sans-vinaigre",
+      "mainKeyword": "Piège à mouches des fruits sans vinaigre",
+      "synonyms": [
+        "vinaigre Piège à mouches des fruits sans"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T09:35:26.738Z"
+    },
+    {
+      "slug": "piege-a-mouches-des-fruits-en-verre",
+      "url": "/pots-de-plantes/piege-a-mouches-des-fruits-en-verre",
+      "mainKeyword": "Piège à mouches des fruits en verre",
+      "synonyms": [
+        "verre Piège à mouches des fruits en"
+      ],
+      "category": "pots-de-plantes",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T09:48:52.517Z"
+    },
+    {
+      "slug": "engrais-pour-gazon",
+      "url": "/gazon/engrais-pour-gazon",
+      "mainKeyword": "Engrais pour gazon",
+      "synonyms": [
+        "gazon Engrais pour"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T10:02:05.011Z"
+    },
+    {
+      "slug": "engrais-gazon-avec-desherbant",
+      "url": "/gazon/engrais-gazon-avec-desherbant",
+      "mainKeyword": "Engrais gazon avec désherbant",
+      "synonyms": [
+        "désherbant Engrais gazon avec"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T12:19:31.829Z"
+    },
+    {
+      "slug": "engrais-gazon-pour-le-printemps",
+      "url": "/gazon/engrais-gazon-pour-le-printemps",
+      "mainKeyword": "Engrais gazon pour le printemps",
+      "synonyms": [
+        "printemps Engrais gazon pour le"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T16:13:42.922Z"
+    },
+    {
+      "slug": "engrais-gazon-pour-lautomne",
+      "url": "/gazon/engrais-gazon-pour-lautomne",
+      "mainKeyword": "Engrais gazon pour l’automne",
+      "synonyms": [
+        "l’automne Engrais gazon pour"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T16:26:09.201Z"
+    },
+    {
+      "slug": "engrais-gazon-avec-anti-mousse",
+      "url": "/gazon/engrais-gazon-avec-anti-mousse",
+      "mainKeyword": "Engrais gazon avec anti-mousse",
+      "synonyms": [],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T17:07:46.086Z"
+    },
+    {
+      "slug": "engrais-organique-pour-gazon",
+      "url": "/gazon/engrais-organique-pour-gazon",
+      "mainKeyword": "Engrais organique pour gazon",
+      "synonyms": [
+        "gazon Engrais organique pour"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T17:21:35.119Z"
+    },
+    {
+      "slug": "guepes-parasitoides-contre-les-mites-alimentaires",
+      "url": "/pots-de-plantes/guepes-parasitoides-contre-les-mites-alimentaires",
+      "mainKeyword": "Guêpes parasitoïdes contre les mites alimentaires",
+      "synonyms": [],
+      "category": "pots-de-plantes",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T17:52:32.882Z"
+    },
+    {
+      "slug": "nematodes-contre-les-moucherons-du-terreau",
+      "url": "/pots-de-plantes/nematodes-contre-les-moucherons-du-terreau",
+      "mainKeyword": "Nématodes contre les moucherons du terreau",
+      "synonyms": [
+        "terreau Nématodes contre les moucherons du"
+      ],
+      "category": "pots-de-plantes",
+      "isPillar": false,
+      "updatedAt": "2026-02-10T19:22:29.658Z"
+    },
+    {
+      "slug": "piege-a-moucherons-du-terreau",
+      "url": "/pots-de-plantes/piege-a-moucherons-du-terreau",
+      "mainKeyword": "Piège à moucherons du terreau",
+      "synonyms": [
+        "terreau Piège à moucherons du"
+      ],
+      "category": "pots-de-plantes",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T12:16:37.278Z"
+    },
+    {
+      "slug": "semences-de-gazon",
+      "url": "/gazon/semences-de-gazon",
+      "mainKeyword": "Semences de gazon",
+      "synonyms": [
+        "gazon Semences de"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T12:29:11.397Z"
+    },
+    {
+      "slug": "semences-de-regarnissage-pour-gazon",
+      "url": "/gazon/semences-de-regarnissage-pour-gazon",
+      "mainKeyword": "Semences de regarnissage pour gazon",
+      "synonyms": [
+        "gazon Semences de regarnissage pour"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T12:40:15.842Z"
+    },
+    {
+      "slug": "spray-anti-nuisibles",
+      "url": "/outils/spray-anti-nuisibles",
+      "mainKeyword": "Spray anti-nuisibles",
+      "synonyms": [],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T13:08:10.435Z"
+    },
+    {
+      "slug": "thermometre-hygrometre",
+      "url": "/outils/thermometre-hygrometre",
+      "mainKeyword": "Thermomètre hygromètre",
+      "synonyms": [
+        "hygromètre Thermomètre"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T15:28:05.749Z"
+    },
+    {
+      "slug": "hygrometre",
+      "url": "/outils/hygrometre",
+      "mainKeyword": "Hygromètre",
+      "synonyms": [],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T15:40:08.273Z"
+    },
+    {
+      "slug": "thermometre-exterieur",
+      "url": "/outils/thermometre-exterieur",
+      "mainKeyword": "Thermomètre extérieur",
+      "synonyms": [
+        "extérieur Thermomètre"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T15:52:16.227Z"
+    },
+    {
+      "slug": "thermometre-avec-application",
+      "url": "/outils/thermometre-avec-application",
+      "mainKeyword": "Thermomètre avec application",
+      "synonyms": [
+        "application Thermomètre avec"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T16:05:12.752Z"
+    },
+    {
+      "slug": "thermometre-infrarouge",
+      "url": "/outils/thermometre-infrarouge",
+      "mainKeyword": "Thermomètre infrarouge",
+      "synonyms": [
+        "infrarouge Thermomètre"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T17:02:50.908Z"
+    },
+    {
+      "slug": "thermometre-gill",
+      "url": "/outils/thermometre-gill",
+      "mainKeyword": "Thermomètre Gill",
+      "synonyms": [
+        "Gill Thermomètre"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-11T17:16:15.171Z"
+    },
+    {
+      "slug": "thermometre-de-piscine",
+      "url": "/outils/thermometre-de-piscine",
+      "mainKeyword": "Thermomètre de piscine",
+      "synonyms": [
+        "piscine Thermomètre de"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T09:36:29.277Z"
+    },
+    {
+      "slug": "thermometre-pour-piscine",
+      "url": "/outils/thermometre-pour-piscine",
+      "mainKeyword": "Thermomètre pour piscine",
+      "synonyms": [
+        "piscine Thermomètre pour"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T09:49:33.515Z"
+    },
+    {
+      "slug": "thermometre-de-galilee",
+      "url": "/gazon/thermometre-de-galilee",
+      "mainKeyword": "Thermomètre de Galilée",
+      "synonyms": [
+        "Galilée Thermomètre de"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T10:02:10.585Z"
+    },
+    {
+      "slug": "thermometre-a-mercure",
+      "url": "/outils/thermometre-a-mercure",
+      "mainKeyword": "Thermomètre à mercure",
+      "synonyms": [
+        "mercure Thermomètre à"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T10:14:19.962Z"
+    },
+    {
+      "slug": "produit-dhivernage-pour-piscine",
+      "url": "/gazon/produit-dhivernage-pour-piscine",
+      "mainKeyword": "Produit d’hivernage pour piscine",
+      "synonyms": [
+        "piscine Produit d’hivernage pour"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T10:25:19.282Z"
+    },
+    {
+      "slug": "allume-feu-en-laine-de-bois-5-kg",
+      "url": "/outils/allume-feu-en-laine-de-bois-5-kg",
+      "mainKeyword": "Allume-feu en laine de bois 5 kg",
+      "synonyms": [],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T10:39:14.082Z"
+    },
+    {
+      "slug": "allume-feu-en-laine-de-bois-10-kg",
+      "url": "/outils/allume-feu-en-laine-de-bois-10-kg",
+      "mainKeyword": "Allume-feu en laine de bois 10 kg",
+      "synonyms": [],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T10:52:03.719Z"
+    },
+    {
+      "slug": "tablier-de-barbecue",
+      "url": "/outils/tablier-de-barbecue",
+      "mainKeyword": "Tablier de barbecue",
+      "synonyms": [
+        "barbecue Tablier de"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T11:08:45.284Z"
+    },
+    {
+      "slug": "tablier-de-barbecue-personnalise",
+      "url": "/meubles/tablier-de-barbecue-personnalise",
+      "mainKeyword": "Tablier de barbecue personnalisé",
+      "synonyms": [
+        "personnalisé Tablier de barbecue"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T14:54:55.392Z"
+    },
+    {
+      "slug": "tablier-de-barbecue-pour-homme",
+      "url": "/outils/tablier-de-barbecue-pour-homme",
+      "mainKeyword": "Tablier de barbecue pour homme",
+      "synonyms": [
+        "homme Tablier de barbecue pour"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-12T15:07:13.156Z"
+    },
+    {
+      "slug": "tablier-de-barbecue-en-cuir",
+      "url": "/outils/tablier-de-barbecue-en-cuir",
+      "mainKeyword": "Tablier de barbecue en cuir",
+      "synonyms": [
+        "cuir Tablier de barbecue en"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-13T15:00:44.802Z"
+    },
+    {
+      "slug": "tablier-de-barbecue-humoristique",
+      "url": "/gazon/tablier-de-barbecue-humoristique",
+      "mainKeyword": "Tablier de barbecue humoristique",
+      "synonyms": [
+        "humoristique Tablier de barbecue"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-13T15:15:08.691Z"
+    },
+    {
+      "slug": "bouteille-pulverisatrice",
+      "url": "/outils/bouteille-pulverisatrice",
+      "mainKeyword": "Bouteille pulvérisatrice",
+      "synonyms": [
+        "pulvérisatrice Bouteille"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-13T15:30:05.862Z"
+    },
+    {
+      "slug": "pulverisateur-dhuile",
+      "url": "/outils/pulverisateur-dhuile",
+      "mainKeyword": "Pulvérisateur d’huile",
+      "synonyms": [
+        "d’huile Pulvérisateur"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-13T15:43:34.795Z"
+    },
+    {
+      "slug": "petit-pulverisateur",
+      "url": "/irrigation/petit-pulverisateur",
+      "mainKeyword": "Petit pulvérisateur",
+      "synonyms": [
+        "pulvérisateur Petit"
+      ],
+      "category": "irrigation",
+      "isPillar": false,
+      "updatedAt": "2026-02-13T15:57:05.793Z"
+    },
+    {
+      "slug": "allume-feu-pour-cheminee",
+      "url": "/outils/allume-feu-pour-cheminee",
+      "mainKeyword": "Allume-feu pour cheminée",
+      "synonyms": [],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-15T08:07:20.550Z"
+    },
+    {
+      "slug": "allume-feu-en-laine-de-bois",
+      "url": "/outils/allume-feu-en-laine-de-bois",
+      "mainKeyword": "Allume-feu en laine de bois",
+      "synonyms": [],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-15T08:19:15.975Z"
+    },
+    {
+      "slug": "housse-de-protection-pour-mobilier-de-jardin",
+      "url": "/meubles/housse-de-protection-pour-mobilier-de-jardin",
+      "mainKeyword": "Housse de protection pour mobilier de jardin",
+      "synonyms": [
+        "jardin Housse de protection pour mobilier de"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-15T11:32:58.844Z"
+    },
+    {
+      "slug": "boules-de-graisse-sans-filet",
+      "url": "/outils/boules-de-graisse-sans-filet",
+      "mainKeyword": "Boules de graisse sans filet",
+      "synonyms": [
+        "filet Boules de graisse sans"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T11:58:12.797Z"
+    },
+    {
+      "slug": "support-pour-boules-de-graisse",
+      "url": "/outils/support-pour-boules-de-graisse",
+      "mainKeyword": "Support pour boules de graisse",
+      "synonyms": [
+        "graisse Support pour boules de"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T12:18:03.240Z"
+    },
+    {
+      "slug": "spray-anti-parasites",
+      "url": "/gazon/spray-anti-parasites",
+      "mainKeyword": "Spray anti-parasites",
+      "synonyms": [],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T12:33:47.111Z"
+    },
+    {
+      "slug": "huile-de-chaine-pour-tronconneuse",
+      "url": "/outils/huile-de-chaine-pour-tronconneuse",
+      "mainKeyword": "Huile de chaîne pour tronçonneuse",
+      "synonyms": [
+        "tronçonneuse Huile de chaîne pour"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T12:51:02.995Z"
+    },
+    {
+      "slug": "fontaine-de-jardin",
+      "url": "/gazon/fontaine-de-jardin",
+      "mainKeyword": "Fontaine de jardin",
+      "synonyms": [
+        "jardin Fontaine de"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T18:26:48.508Z"
+    },
+    {
+      "slug": "fontaine-de-jardin-moderne",
+      "url": "/meubles/fontaine-de-jardin-moderne",
+      "mainKeyword": "Fontaine de jardin moderne",
+      "synonyms": [
+        "moderne Fontaine de jardin"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T18:45:00.106Z"
+    },
+    {
+      "slug": "fontaine-solaire",
+      "url": "/irrigation/fontaine-solaire",
+      "mainKeyword": "Fontaine solaire",
+      "synonyms": [
+        "solaire Fontaine"
+      ],
+      "category": "irrigation",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T19:02:18.759Z"
+    },
+    {
+      "slug": "pompe-pour-fontaine",
+      "url": "/irrigation/pompe-pour-fontaine",
+      "mainKeyword": "Pompe pour fontaine",
+      "synonyms": [
+        "fontaine Pompe pour"
+      ],
+      "category": "irrigation",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T19:26:46.646Z"
+    },
+    {
+      "slug": "balancoire-avec-toboggan",
+      "url": "/gazon/balancoire-avec-toboggan",
+      "mainKeyword": "Balançoire avec toboggan",
+      "synonyms": [
+        "toboggan Balançoire avec"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T20:17:41.240Z"
+    },
+    {
+      "slug": "tour-de-jeux-avec-balancoire-et-toboggan",
+      "url": "/gazon/tour-de-jeux-avec-balancoire-et-toboggan",
+      "mainKeyword": "Tour de jeux avec balançoire et toboggan",
+      "synonyms": [
+        "toboggan Tour de jeux avec balançoire et"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T20:37:13.581Z"
+    },
+    {
+      "slug": "balancoire-pour-adultes",
+      "url": "/meubles/balancoire-pour-adultes",
+      "mainKeyword": "Balançoire pour adultes",
+      "synonyms": [
+        "adultes Balançoire pour"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T21:01:29.796Z"
+    },
+    {
+      "slug": "balancoire-de-jardin",
+      "url": "/meubles/balancoire-de-jardin",
+      "mainKeyword": "Balançoire de jardin",
+      "synonyms": [
+        "jardin Balançoire de"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-20T21:25:09.455Z"
+    },
+    {
+      "slug": "balancoire-en-bois",
+      "url": "/meubles/balancoire-en-bois",
+      "mainKeyword": "Balançoire en bois",
+      "synonyms": [
+        "bois Balançoire en"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-21T14:28:25.678Z"
+    },
+    {
+      "slug": "bassin-deau-pour-le-jardin",
+      "url": "/irrigation/bassin-deau-pour-le-jardin",
+      "mainKeyword": "Bassin d’eau pour le jardin",
+      "synonyms": [
+        "jardin Bassin d’eau pour le"
+      ],
+      "category": "irrigation",
+      "isPillar": false,
+      "updatedAt": "2026-02-21T17:42:13.799Z"
+    },
+    {
+      "slug": "bassin-de-jardin",
+      "url": "/gazon/bassin-de-jardin",
+      "mainKeyword": "Bassin de jardin",
+      "synonyms": [
+        "jardin Bassin de"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-21T18:05:52.620Z"
+    },
+    {
+      "slug": "abreuvoir-pour-oiseaux",
+      "url": "/pots-de-plantes/abreuvoir-pour-oiseaux",
+      "mainKeyword": "Abreuvoir pour oiseaux",
+      "synonyms": [
+        "oiseaux Abreuvoir pour"
+      ],
+      "category": "pots-de-plantes",
+      "isPillar": false,
+      "updatedAt": "2026-02-21T20:52:50.002Z"
+    },
+    {
+      "slug": "abreuvoir-de-jardin-pour-oiseaux",
+      "url": "/outils/abreuvoir-de-jardin-pour-oiseaux",
+      "mainKeyword": "Abreuvoir de jardin pour oiseaux",
+      "synonyms": [
+        "oiseaux Abreuvoir de jardin pour"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-02-23T11:00:06.804Z"
+    },
+    {
+      "slug": "abreuvoir-suspendu-pour-oiseaux",
+      "url": "/pots-de-plantes/abreuvoir-suspendu-pour-oiseaux",
+      "mainKeyword": "Abreuvoir suspendu pour oiseaux",
+      "synonyms": [
+        "oiseaux Abreuvoir suspendu pour"
+      ],
+      "category": "pots-de-plantes",
+      "isPillar": false,
+      "updatedAt": "2026-02-23T11:27:16.623Z"
+    },
+    {
+      "slug": "abreuvoir-sur-pied-pour-oiseaux",
+      "url": "/gazon/abreuvoir-sur-pied-pour-oiseaux",
+      "mainKeyword": "Abreuvoir sur pied pour oiseaux",
+      "synonyms": [
+        "oiseaux Abreuvoir sur pied pour"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-02-24T10:37:31.432Z"
+    },
+    {
+      "slug": "table-a-eau",
+      "url": "/irrigation/table-a-eau",
+      "mainKeyword": "Table à eau",
+      "synonyms": [
+        "eau Table à"
+      ],
+      "category": "irrigation",
+      "isPillar": false,
+      "updatedAt": "2026-02-24T11:01:54.174Z"
+    },
+    {
+      "slug": "table-a-eau-pour-enfants",
+      "url": "/meubles/table-a-eau-pour-enfants",
+      "mainKeyword": "Table à eau pour enfants",
+      "synonyms": [
+        "enfants Table à eau pour"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-24T17:55:21.463Z"
+    },
+    {
+      "slug": "table-de-jeux-deau",
+      "url": "/meubles/table-de-jeux-deau",
+      "mainKeyword": "Table de jeux d’eau",
+      "synonyms": [
+        "d’eau Table de jeux"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-02-28T23:10:30.205Z"
+    },
+    {
+      "slug": "table-de-jardin-reglable-en-hauteur",
+      "url": "/meubles/table-de-jardin-reglable-en-hauteur",
+      "mainKeyword": "Table de jardin réglable en hauteur",
+      "synonyms": [
+        "hauteur Table de jardin réglable en"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-03-11T14:37:52.175Z"
+    },
+    {
+      "slug": "salon-de-jardin",
+      "url": "/meubles/salon-de-jardin",
+      "mainKeyword": "Salon de jardin",
+      "synonyms": [
+        "jardin Salon de"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-03-11T15:07:22.589Z"
+    },
+    {
+      "slug": "fauteuil-lounge-de-jardin",
+      "url": "/meubles/fauteuil-lounge-de-jardin",
+      "mainKeyword": "Fauteuil lounge de jardin",
+      "synonyms": [
+        "jardin Fauteuil lounge de"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-03-11T17:34:25.788Z"
+    },
+    {
+      "slug": "cloture-de-jardin-en-metal",
+      "url": "/meubles/cloture-de-jardin-en-metal",
+      "mainKeyword": "Clôture de jardin en métal",
+      "synonyms": [
+        "métal Clôture de jardin en"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-03-12T07:45:13.834Z"
+    },
+    {
+      "slug": "cloture-de-jardin-en-plastique",
+      "url": "/outils/cloture-de-jardin-en-plastique",
+      "mainKeyword": "Clôture de jardin en plastique",
+      "synonyms": [
+        "plastique Clôture de jardin en"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-03-12T10:27:05.015Z"
+    },
+    {
+      "slug": "decoration-de-jardin-en-acier-rouille",
+      "url": "/meubles/decoration-de-jardin-en-acier-rouille",
+      "mainKeyword": "Décoration de jardin en acier rouillé",
+      "synonyms": [
+        "rouillé Décoration de jardin en acier"
+      ],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-03-12T11:26:15.784Z"
+    },
+    {
+      "slug": "decoration-dhalloween-pour-le-jardin",
+      "url": "/gazon/decoration-dhalloween-pour-le-jardin",
+      "mainKeyword": "Décoration d’Halloween pour le jardin",
+      "synonyms": [
+        "jardin Décoration d’Halloween pour le"
+      ],
+      "category": "gazon",
+      "isPillar": false,
+      "updatedAt": "2026-03-13T08:57:51.096Z"
+    },
+    {
+      "slug": "brise-vue-en-bois",
+      "url": "/meubles/brise-vue-en-bois",
+      "mainKeyword": "Brise-vue en bois",
+      "synonyms": [],
+      "category": "meubles",
+      "isPillar": false,
+      "updatedAt": "2026-03-13T09:26:36.944Z"
+    },
+    {
+      "slug": "abri-de-jardin-en-wpc",
+      "url": "/outils/abri-de-jardin-en-wpc",
+      "mainKeyword": "Abri de jardin en WPC",
+      "synonyms": [
+        "WPC Abri de jardin en"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-03-13T09:53:33.940Z"
+    },
+    {
+      "slug": "compteur-deau-pour-jardin",
+      "url": "/irrigation/compteur-deau-pour-jardin",
+      "mainKeyword": "Compteur d’eau pour jardin",
+      "synonyms": [
+        "jardin Compteur d’eau pour"
+      ],
+      "category": "irrigation",
+      "isPillar": false,
+      "updatedAt": "2026-03-13T12:52:51.751Z"
+    }
+  ]
+}

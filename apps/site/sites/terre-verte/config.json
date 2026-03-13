@@ -1,0 +1,115 @@
+{
+  "siteId": "terre-verte",
+  "logoUrl": "/logo-terre-verte.png",
+  "domain": "terre-verte.fr",
+  "defaultLanguage": "fr",
+  "style": {
+    "tone": "créatif et inspirant; inspirant, accessible et factuel (comparatif sans pression)",
+    "perspective": "adresse directe en tutoiement",
+    "target_audience": "Jardiniers amateurs et propriétaires de jardins",
+    "seo_focus": "mots-clés comparatifs + contexte explicatif; priorité à l’aide au choix plutôt qu’à la vente",
+    "keywords_strategy": "intégrer naturellement les mots-clés; expliquer les différences; avantages/inconvénients; éviter les répétitions; pas de formulations tapageuses",
+    "style_examples": {
+      "good": "Dans un comparatif, le prix ne suffit pas. Regarde surtout l’usage, la qualité des matériaux et ce qui correspond vraiment à ton jardin.",
+      "bad": "Achète le meilleur maintenant — top promos"
+    },
+    "forbidden_words": [
+      "acheter maintenant",
+      "promo",
+      "promotion",
+      "réduction",
+      "pas cher",
+      "meilleur",
+      "top offre",
+      "deal",
+      "bestseller",
+      "test",
+      "tests",
+      "essai",
+      "essais",
+      "garanti",
+      "100%",
+      "2020",
+      "2021",
+      "2022",
+      "2023",
+      "2024",
+      "2025",
+      "2026"
+    ],
+    "ai_instructions": "Écris en français en gardant le tutoiement. Sois factuel, informatif et bienveillant et pédagogue. Explique clairement les différences, liste des avantages et des inconvénients honnêtes, et aide à décider sans forcer l’achat. Pas de mots de type « test/essai », pas d’années, pas de promesses irréalistes."
+  },
+  "affiliate": {
+    "amazon": {
+      "partnerTag": "terre-verte-21",
+      "locale": "FR",
+      "apiMarketplace": "FR",
+      "domain": "amazon.fr"
+    }
+  },
+  "branding": {
+    "primary": "#2E7D32",
+    "secondary": "#F6F8F4",
+    "contrastMin": 4.5
+  },
+  "prompts": {
+    "brandName": "Terre Verte",
+    "topicDomain": "Jardin et terrasse",
+    "brandDescription": "Terre Verte est un site comparatif dans l’univers Jardin et terrasse. On explique simplement les différences, on présente des options utiles et on aide à choisir sans forcer l’achat.",
+    "voice": "créatif et inspirant; factuel, informatif et bienveillant; comparatif sans pression",
+    "positioning": "Comprendre avant d’acheter : critères clairs, comparaison honnête, tableau + explication."
+  },
+  "categories": [
+    {
+      "id": "gazon",
+      "slug": "gazon",
+      "title": "Gazon"
+    },
+    {
+      "id": "irrigation",
+      "slug": "irrigation",
+      "title": "Irrigation"
+    },
+    {
+      "id": "meubles",
+      "slug": "meubles",
+      "title": "Meubles"
+    },
+    {
+      "id": "outils",
+      "slug": "outils",
+      "title": "Outils"
+    },
+    {
+      "id": "pots-de-plantes",
+      "slug": "pots-de-plantes",
+      "title": "Pots de plantes"
+    }
+  ],
+  "authors": [
+    {
+      "id": "aut_1",
+      "name": "Camille Laurent",
+      "bio": "Voix numérique (assistée par IA) pour des comparatifs clairs et utiles.",
+      "avatarUrl": "/authors/camille.png"
+    },
+    {
+      "id": "aut_2",
+      "name": "Nicolas Perrin",
+      "bio": "Voix numérique (assistée par IA) orientée critères concrets et choix sereins.",
+      "avatarUrl": "/authors/nicolas.png"
+    },
+    {
+      "id": "aut_3",
+      "name": "Élodie Martin",
+      "bio": "Voix numérique (assistée par IA) attentive aux saisons, aux plantes et aux usages en France.",
+      "avatarUrl": "/authors/elodie.png"
+    },
+    {
+      "id": "aut_4",
+      "name": "Julien Moreau",
+      "bio": "Voix numérique (assistée par IA) axée outils, entretien et bonnes pratiques.",
+      "avatarUrl": "/authors/julien.png"
+    }
+  ]
+}
