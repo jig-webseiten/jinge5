@@ -880,6 +880,17 @@
       "category": "irrigation",
       "isPillar": false,
       "updatedAt": "2026-03-13T12:52:51.751Z"
+    },
+    {
+      "slug": "bester-trennschleifer",
+      "url": "/outils/bester-trennschleifer",
+      "mainKeyword": "bester trennschleifer",
+      "synonyms": [
+        "trennschleifer bester"
+      ],
+      "category": "outils",
+      "isPillar": false,
+      "updatedAt": "2026-03-14T19:40:19.105Z"
     }
   ]
 }

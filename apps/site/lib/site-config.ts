@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 
 type SiteConfig = Record<string, any>;
 
-const ROOT_DOMAIN = "garden-hero.net";
+const ROOT_DOMAIN = "trennschleifer-profi.de";
 
 /**
  * Custom Domains müssen explizit gemappt werden, weil sie nicht als Subdomain
@@ -16,7 +16,6 @@ const CUSTOM_DOMAIN_MAP: Record<string, string> = {
   // Hof & Kuh
   "hof-und-kuh.de": "hof-und-kuh",
   "www.hof-und-kuh.de": "hof-und-kuh",
-  
 
   // Garden Hero (Hauptdomain)
   "garden-hero.net": "garden-hero",
@@ -57,13 +56,13 @@ export function siteIdFromHost(host: string | null | undefined): string | null {
 
   // 3) root domain
   if (h === ROOT_DOMAIN || h === `www.${ROOT_DOMAIN}`) {
-    return "garden-hero";
+    return "trennschleifer-profi";
   }
 
   // 3b) wildcard: <siteId>.garden-hero.net
   if (h.endsWith(`.${ROOT_DOMAIN}`)) {
     const left = h.slice(0, -(ROOT_DOMAIN.length + 1));
-    if (!left || left === "www") return "garden-hero";
+    if (!left || left === "www") return "trennschleifer-profi";
     return left;
   }
 
@@ -110,7 +109,7 @@ export function getSiteConfig(siteIdOverride?: string): SiteConfig {
     (siteIdHeader && siteIdHeader) ||
     siteIdFromHost(hostHeader) ||
     (process.env.SITE_ID ? process.env.SITE_ID.trim() : "") ||
-    "garden-hero";
+    "trennschleifer-profi";
 
   const filePath = siteConfigPath(resolvedSiteId);
 

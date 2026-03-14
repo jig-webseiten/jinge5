@@ -26597,7 +26597,7 @@
         "elektrogeraete"
       ],
       "group": "kw:trennschleifer",
-      "used": 0,
+      "used": 1,
       "usedBy": [],
       "updatedAt": "2026-02-01T18:58:23.966Z"
     },
@@ -102126,6 +102126,28 @@
       "used": 0,
       "usedBy": [],
       "updatedAt": "2026-02-28T23:10:27.792Z"
+    },
+    {
+      "id": "trennschleifer-profi:bester-trennschleifer",
+      "type": "network",
+      "siteId": "trennschleifer-profi",
+      "domain": "trennschleifer-profi",
+      "title": "Bester trennschleifer: lequel choisir et pourquoi?",
+      "url": "https://trennschleifer-profi/bester-trennschleifer",
+      "keywords": [
+        {
+          "kw": "bester trennschleifer",
+          "match": "phrase"
+        }
+      ],
+      "language": "fr",
+      "categories": [
+        "outils"
+      ],
+      "group": "kw:bester-trennschleifer",
+      "used": 0,
+      "usedBy": [],
+      "updatedAt": "2026-03-14T19:41:03.312Z"
     }
   ]
 }
